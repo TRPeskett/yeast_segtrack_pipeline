@@ -2,8 +2,6 @@
 Finds instances of a provided or selected template in an image
 """
 
-import input_parameters
-import h5py
 import argparse
 import collections
 import csv
@@ -69,7 +67,7 @@ def arguments():
     """Parsing the input arguments"""
 
     parser = argparse.ArgumentParser(
-        description="Help for separating the traps and running re-tracking",
+        description="Help for seperating the traps and running re-tracking",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
@@ -77,22 +75,22 @@ def arguments():
         "--input_image",
         help="Input image including the full path for extraction",
         type=str,
-        default=input_parameters.path_to_full_movie # required=True,
+        default="/Users/tarunchadha/Documents/yeast_ageing/ageing_movie_examples/2021-12-15_ageing_optoControls_lightOff_Pos9_BF-1.tif",  # required=True,
     )
     parser.add_argument(
         "-t",
         "--template_image",
         help="Template image including the full path for extraction",
         type=str,
-        default=input_parameters.path_to_template
+        # default="/media/chadhat/4d105adc-3356-4a16-9761-ee0dcd7f23dc/Work/yeast_ageing/template_matching/data/trap_template.png",
     )
-    # parser.add_argument(
-    #     "-im",
-    #     "--input_mask",
-    #     help="Input mask including the full path for extraction",
-    #     type=str,
-    #     default=#segmentations results
-    #)
+    parser.add_argument(
+        "-im",
+        "--input_mask",
+        help="Input mask including the full path for extraction",
+        type=str,
+        default="/Users/tarunchadha/Documents/yeast_ageing/ageing_movie_examples/mask_clean_data_batchsize_2_Nepochs_250_21_04.h5",
+    )
     parser.add_argument(
         "-th",
         "--threshold",
@@ -113,10 +111,9 @@ def arguments():
     parser.add_argument(
         "-o",
         "--output_folder",
-
         help="Folder where the output files will be saved",
         type=str,
-        default="./output_data/",
+        default="./output/",
     )
     parser.add_argument(
         "-extra_width",
@@ -139,7 +136,7 @@ def arguments():
     return parser.parse_args()
 
 
-def read_image(input_image):
+def read_image(input_image, frame_nb=0):
     """Read the input image/image stack and return the first image
 
     Args:
@@ -156,7 +153,7 @@ def read_image(input_image):
 
     frames = ImageSequence.all_frames(data)
     # converted_image = np.array(frame, dtype=np.uint16)
-    first_frame = frames[0]
+    first_frame = frames[frame_nb]
 
     """
     
@@ -276,20 +273,19 @@ def split_data(input_image, raw_image_data, crop_points, args):
             os.mkdir(output_path)
         except FileExistsError:
             pass
-
         crop_image(
             *points,
             input_image_data=raw_image_data,
             input_image=input_image,
             output_path=output_path,
         )
-        # extract_data(
-        #     *points,
-        #     key,
-        #     input_image=input_image,
-        #     mask=args.input_mask,
-        #     output_path=output_path,
-        # )
+        extract_data(
+            *points,
+            key,
+            input_image=input_image,
+            mask=args.input_mask,
+            output_path=output_path,
+        )
 
 
 def check_args(args):
@@ -307,9 +303,9 @@ def check_args(args):
                 f"Template image {args.template_image} not found"
             )
 
-    # if args.input_mask:
-    #     if not os.path.isfile(args.input_mask):
-    #         raise FileNotFoundError(f"Input mask {args.input_mask} not found")
+    if args.input_mask:
+        if not os.path.isfile(args.input_mask):
+            raise FileNotFoundError(f"Input mask {args.input_mask} not found")
 
     if args.output_folder:
         if not os.path.isdir(args.output_folder):
@@ -360,7 +356,7 @@ def create_template(img, args):
 def main() -> None:
     """Template matching pipeline"""
 
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    timestamp = datetime.now().strftime("%Y-%m-%d")
 
     args = arguments()
 
