@@ -259,16 +259,16 @@ def template_matching(
     return crop_points
 
 
-def split_data(input_image, raw_image_data, crop_points, args):
+def split_data(input_image, raw_image_data, crop_points, input_mask, output_folder):
     logging.info("Splitting the image and data based on the detected traps")
     try:
         os.mkdir(
-            Path(args.output_folder) / "split_data",
+            Path(output_folder) / "split_data",
         )
     except FileExistsError:
         pass
     for key, points in crop_points.items():
-        output_path = Path(args.output_folder) / "split_data" / f"{key}"
+        output_path = Path(output_folder) / "split_data" / f"{key}"
         try:
             os.mkdir(output_path)
         except FileExistsError:
@@ -283,7 +283,7 @@ def split_data(input_image, raw_image_data, crop_points, args):
             *points,
             key,
             input_image=input_image,
-            mask=args.input_mask,
+            mask=input_mask,
             output_path=output_path,
         )
 
@@ -314,13 +314,11 @@ def check_args(args):
             )
 
 
-def create_template(img, args):
+def create_template(img, input_image, output_folder):
     """Get the template from the image using a rectangular selection"""
 
     logging.info("Creating template based on user selection")
 
-    input_image = args.input_image
-    output_folder = args.output_folder
     _, ax = plt.subplots()
 
     ax.imshow(img)
@@ -353,49 +351,102 @@ def create_template(img, args):
     return template
 
 
-def main() -> None:
+# def main() -> None:
+#     """Template matching pipeline"""
+#
+#     timestamp = datetime.now().strftime("%Y-%m-%d")
+#
+#     args = arguments()
+#
+#     # check if the provided arguments are valid
+#     check_args(args)
+#
+#     if not os.path.isdir(Path(args.output_folder) / timestamp):
+#         os.mkdir(Path(args.output_folder) / timestamp)
+#         args.output_folder = Path(args.output_folder) / timestamp
+#
+#     logging.basicConfig(
+#         level=logging.INFO,
+#         format="%(asctime)s %(levelname)s %(message)s",
+#         filename=f"{args.output_folder}/template_matching.log",  # the log file name
+#         filemode="w",  # mode in which to open the file (write mode here)
+#     )
+#
+#     raw_image_data, first_image_data = read_image(args.input_image)
+#
+#     if args.template_image:
+#         template_data, _ = read_image(args.template_image)
+#     else:
+#         [template_data] = create_template(first_image_data, args)
+#
+#     image_array = preprocess(raw_image_data)
+#
+#     template_array = preprocess(template_data)
+#     print("Args: ", args)
+#     crop_points = template_matching(
+#         image_array,
+#         template_array,
+#         args.output_folder,
+#         threshold=args.threshold,
+#         width_height=(args.extra_width, args.extra_height),
+#         methods=tuple(args.methods.split(",")),
+#     )
+#
+#     split_data(args.input_image, raw_image_data, crop_points, args)
+
+def main(input_image,
+         input_mask,
+         template_image,
+         output_folder,
+         threshold=0.7,
+         extra_width=0.9,
+         extra_height=0.9,
+         methods=("TM_CCOEFF_NORMED",)):
+
     """Template matching pipeline"""
 
     timestamp = datetime.now().strftime("%Y-%m-%d")
 
-    args = arguments()
-
-    # check if the provided arguments are valid
-    check_args(args)
-
-    if not os.path.isdir(Path(args.output_folder) / timestamp):
-        os.mkdir(Path(args.output_folder) / timestamp)
-        args.output_folder = Path(args.output_folder) / timestamp
+    if not os.path.isdir(Path(output_folder) / timestamp):
+        os.mkdir(Path(output_folder) / timestamp)
+        output_folder = Path(output_folder) / timestamp
 
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
-        filename=f"{args.output_folder}/template_matching.log",  # the log file name
+        filename=f"{output_folder}/template_matching.log",  # the log file name
         filemode="w",  # mode in which to open the file (write mode here)
     )
 
-    raw_image_data, first_image_data = read_image(args.input_image)
+    raw_image_data, first_image_data = read_image(input_image)
 
-    if args.template_image:
-        template_data, _ = read_image(args.template_image)
+    if template_image:
+        template_data, _ = read_image(template_image)
     else:
-        [template_data] = create_template(first_image_data, args)
+        [template_data] = create_template(first_image_data,
+                                          input_image,
+                                          output_folder)
 
     image_array = preprocess(raw_image_data)
 
     template_array = preprocess(template_data)
-    print("Args: ", args)
+
     crop_points = template_matching(
         image_array,
         template_array,
-        args.output_folder,
-        threshold=args.threshold,
-        width_height=(args.extra_width, args.extra_height),
-        methods=tuple(args.methods.split(",")),
+        output_folder,
+        threshold=threshold,
+        width_height=(extra_width, extra_height),
+        methods=tuple(methods.split(",")),
     )
 
-    split_data(args.input_image, raw_image_data, crop_points, args)
+    split_data(input_image,
+               raw_image_data,
+               crop_points,
+               input_mask,
+               output_folder)
 
+    return output_folder
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

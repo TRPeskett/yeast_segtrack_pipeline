@@ -512,12 +512,21 @@ def main():
     path_to_no_fluor_movie = './output/' + filename + '_no_fluor.tif'
     path_to_no_fluor_mask = './output/' + filename + "_no_fluor.h5"
 
-    if not args.no_splitting_traps:
-        os.system(
-            'python template_matching.py -i ' + path_to_no_fluor_movie +
-            ' -t ' + path_to_template +
-            ' -o ./output' +
-            ' -im ' + path_to_no_fluor_mask)
+    # if not args.no_splitting_traps:
+    #     os.system(
+    #         'python template_matching.py -i ' + path_to_no_fluor_movie +
+    #         ' -t ' + path_to_template +
+    #         ' -o ./output' +
+    #         ' -im ' + path_to_no_fluor_mask)
+
+    output_folder = './output'
+
+    path_to_splitted_traps = template_matching.main(
+        path_to_no_fluor_movie,
+        path_to_no_fluor_mask,
+        path_to_template,
+        output_folder
+    )
 
     print("\n")
 
@@ -525,9 +534,8 @@ def main():
     # step 3 : adapt the output format for midap
     ###################################
 
-
     if not args.no_format_midap:
-        adapt_output_to_midap(path_to_splitted_traps)
+        adapt_output_to_midap(path_to_splitted_traps, frame_ini, frame_end)
 
     print("\n")
     # ###################################
