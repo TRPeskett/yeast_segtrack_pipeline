@@ -281,8 +281,7 @@ def get_fluorescence_data(trap_path, Nmax, fluor_offset, fluor_step):
 
 
 def generate_summary_plots(trap_path):
-
-    trap_nb=trap_path.split('/')[-1]
+    trap_nb = trap_path.split('/')[-1]
 
     full_df = pd.read_csv(trap_path + '/tracking_with_fluor.csv')
     df_inter = full_df.loc[(full_df['Type'] == 'mother') & (full_df['fluor_avg'] != -1.)]
@@ -295,30 +294,103 @@ def generate_summary_plots(trap_path):
     # the number of elements separated by the comma
     # = number of fluor px to get an indication on the cell size :
 
-    size_cell = lambda x: [ len(elmt[1].split(',')) for elmt in x ]
+    size_cell = lambda x: [len(elmt[1].split(',')) for elmt in x]
 
-
-    to_plot_size_cell = np.vstack( (fluor_val_arr[:,0],
-                                    size_cell(fluor_val_arr)[:]) )
+    to_plot_size_cell = np.vstack((fluor_val_arr[:, 0],
+                                   size_cell(fluor_val_arr)[:]))
 
     plt.rcParams["figure.figsize"] = (12, 10)
     fig, axs = plt.subplots(2)
 
-    l1,=axs[0].plot(fluor_stat_arr[:, 0], fluor_stat_arr[:, 1])
-    l2,=axs[0].plot(fluor_stat_arr[:, 0], fluor_stat_arr[:, 2])
+    l1, = axs[0].plot(fluor_stat_arr[:, 0], fluor_stat_arr[:, 1])
+    l2, = axs[0].plot(fluor_stat_arr[:, 0], fluor_stat_arr[:, 2])
     axs[0].set_title('Fluorescence values, trap nb. ' + trap_nb)
     axs[0].set_xlabel('Frame number')
     axs[0].set_ylabel('Average value or std, units from tif file')
     fig.legend((l1, l2), ('Average', 'Standard deviation'))
 
-    axs[1].plot(to_plot_size_cell[0,:], to_plot_size_cell[1,:], color='tab:green')
+    axs[1].plot(to_plot_size_cell[0, :], to_plot_size_cell[1, :], color='tab:green')
     axs[1].set_title('Size of the cell')
     axs[1].set_xlabel('Frame number')
     axs[1].set_ylabel('Size of cell (number of px)')
-    plt.savefig(trap_path + '/summary_trap_'+trap_nb+'.png')
+    plt.savefig(trap_path + '/summary_trap_' + trap_nb + '.png')
     plt.close()
 
     return 0
+
+
+def remove_fluor_frames(path_to_full_movie,
+                        path_to_first_mask,
+                        filename,
+                        fluor_offset,
+                        fluor_step):
+    im = io.imread(path_to_full_movie)
+    data = h5py.File(path_to_first_mask, "r+")
+    data_no_fluor = h5py.File('./output/' + filename + "_no_fluor.h5", "w")
+
+    for group in data.keys():
+        g1 = data_no_fluor.create_group(group)
+        for i in range(0, len(data[group].keys())):
+            dset = 'T' + str(i)
+
+            arr = data[group][dset][:, :]
+
+            if i == 0:
+                arr_old = arr
+
+            frame_num = int(dset.split("T")[1])
+
+            if (frame_num - fluor_offset) % fluor_step == 0 and frame_num >= fluor_offset:
+                # we are going to duplicate the previous picture and replace the fluor. picture
+                im[frame_num] = im[frame_num - 1]
+                g1.create_dataset(dset, data=arr_old)
+                data_no_fluor[group][dset][:, :] = arr_old
+            else:
+                g1.create_dataset(dset, data=arr)
+                pass
+
+            arr_old = arr
+
+    im_nofluor = im
+    imwrite('./output/' + filename + '_no_fluor.tif', im_nofluor)
+    data_no_fluor.close()
+
+
+def adapt_output_to_midap(root_path, frame_ini, frame_end):
+    list_traps = glob.glob(root_path + '/*')
+    list_traps.sort()
+
+    for i, trap_path in enumerate(list_traps):
+        print(f"Converting output format of trap {trap_path:s}")
+
+        maskfile = glob.glob(list_traps[i] + '/*h5')[0]
+        tiffile = glob.glob(list_traps[i] + '/*tif')[0]
+
+        list_shifted_im = correct_shift(tiffile, maskfile)
+        list_shifted_im[0].save(list_traps[i] + '/shift_corrected.tif',
+                                save_all=True,
+                                append_images=list_shifted_im[1:])
+
+        tiffile = list_traps[i] + '/shift_corrected.tif'
+
+        Path(trap_path + '/midap/seg_im').mkdir(parents=True, exist_ok=True)
+        Path(trap_path + '/midap/cut_im').mkdir(parents=True, exist_ok=True)
+
+        mask = h5py.File(maskfile, "r")
+        group = "FOV0"
+        list_dset_num = range(frame_ini, frame_end)
+
+        for n in list_dset_num:
+            dset = 'T' + str(n)
+            arr = mask[group][dset][:]
+            arr = arr.astype(np.uint16)
+
+            tiffwrite(trap_path + '/midap/seg_im/im_' + f"{n:03d}" + '.tif', arr, 'XY')
+
+        im = io.imread(tiffile)
+        for n in range(frame_ini, frame_end):
+            im_for_png = Image.fromarray(im[n])
+            im_for_png.save(trap_path + "/midap/cut_im/im_" + f"{n:03d}" + ".png")
 
 
 def arguments():
@@ -396,16 +468,18 @@ def main():
     path_to_weights = os.getenv('WEIGHTS_YEAST')
     path_to_template = os.getenv('TEMPLATE_YEAST_TRAP')
 
+    path_to_first_mask = path_to_full_movie.split(".tif")[0]
+    path_to_first_mask = path_to_first_mask + '.h5'
     filename = path_to_full_movie.split('/')[-1]
     filename = filename.split('.')[0]
 
     args = arguments()
 
     im = io.imread(path_to_full_movie)
-
     Nmax = im.shape[0]
     frame_ini = 0
     frame_end = Nmax - 1
+    im.close()
 
     ###################################
     # step 1 : do the segmentation of the full movie [code from launch_NN_commandline]
@@ -414,9 +488,7 @@ def main():
     ###################################
 
     if not args.no_segmentation:
-        image_path = path_to_full_movie
-        mask_path = image_path.split(".tif")[0]
-        reader = nd.Reader("", mask_path + '.h5', image_path)
+        reader = nd.Reader("", path_to_first_mask, path_to_full_movie)
         LaunchInstanceSegmentation(reader, image_type=None, fov_indices=[0], time_value1=frame_ini,
                                    time_value2=frame_end,
                                    thr_val=0.9,
@@ -425,53 +497,27 @@ def main():
         print('Segmentation step done')
         print("Post-processing of the segmentation : overwriting fluor. frames")
 
-        data = h5py.File(mask_path + '.h5', "r+")
-        data_no_fluor = h5py.File('./output/' + filename + "_no_fluor.h5", "w")
-
-        for group in data.keys():
-            g1 = data_no_fluor.create_group(group)
-            for i in range(0, len(data[group].keys())):
-                dset = 'T' + str(i)
-
-                arr = data[group][dset][:, :]
-
-                if i == 0:
-                    arr_old = arr
-
-                frame_num = int(dset.split("T")[1])
-
-                if (frame_num - fluor_offset) % fluor_step == 0 and frame_num >= fluor_offset:
-                    # we are going to duplicate the previous picture and replace the fluor. picture
-                    im[frame_num] = im[frame_num - 1]
-                    g1.create_dataset(dset, data=arr_old)
-                    data_no_fluor[group][dset][:, :] = arr_old
-                else:
-                    g1.create_dataset(dset, data=arr)
-                    pass
-
-                arr_old = arr
-
-        im_nofluor = im
-        imwrite('./output/' + filename + '_no_fluor.tif', im_nofluor)
-        data_no_fluor.close()
+        remove_fluor_frames(path_to_full_movie,
+                            path_to_first_mask,
+                            filename,
+                            fluor_offset,
+                            fluor_step)
 
     print('\n')
 
     # ###################################
     # # step 2 : separate the traps from the movie
-    # this step has to be done on a movie that does not contain fluorescence frames
-    # otherwise, the subsequent tracking will be off
     # ###################################
 
     path_to_no_fluor_movie = './output/' + filename + '_no_fluor.tif'
-    no_fluor_mask_path = './output/' + filename + "_no_fluor.h5"
+    path_to_no_fluor_mask = './output/' + filename + "_no_fluor.h5"
 
     if not args.no_splitting_traps:
         os.system(
             'python template_matching.py -i ' + path_to_no_fluor_movie +
             ' -t ' + path_to_template +
             ' -o ./output' +
-            ' -im ' + no_fluor_mask_path)
+            ' -im ' + path_to_no_fluor_mask)
 
     print("\n")
 
@@ -479,43 +525,9 @@ def main():
     # step 3 : adapt the output format for midap
     ###################################
 
-    # take the latest modified folder in ... /output/...
-    root_path = './output/2024-02-13/split_data'
-    list_traps = glob.glob(root_path + '/*')
-    list_traps.sort()
 
     if not args.no_format_midap:
-        for i, trap_path in enumerate(list_traps):
-            print(f"Converting output format of trap {trap_path:s}")
-
-            maskfile = glob.glob(list_traps[i] + '/*h5')[0]
-            tiffile = glob.glob(list_traps[i] + '/*tif')[0]
-
-            list_shifted_im = correct_shift(tiffile, maskfile)
-            list_shifted_im[0].save(list_traps[i] + '/shift_corrected.tif',
-                                    save_all=True,
-                                    append_images=list_shifted_im[1:])
-
-            tiffile = list_traps[i] + '/shift_corrected.tif'
-
-            Path(trap_path + '/midap/seg_im').mkdir(parents=True, exist_ok=True)
-            Path(trap_path + '/midap/cut_im').mkdir(parents=True, exist_ok=True)
-
-            mask = h5py.File(maskfile, "r")
-            group = "FOV0"
-            list_dset_num = range(frame_ini, frame_end)
-
-            for n in list_dset_num:
-                dset = 'T' + str(n)
-                arr = mask[group][dset][:]
-                arr = arr.astype(np.uint16)
-
-                tiffwrite(trap_path + '/midap/seg_im/im_' + f"{n:03d}" + '.tif', arr, 'XY')
-
-            im = io.imread(tiffile)
-            for n in range(frame_ini, frame_end):
-                im_for_png = Image.fromarray(im[n])
-                im_for_png.save(trap_path + "/midap/cut_im/im_" + f"{n:03d}" + ".png")
+        adapt_output_to_midap(path_to_splitted_traps)
 
     print("\n")
     # ###################################
@@ -523,6 +535,7 @@ def main():
     # ###################################
 
     if not args.no_tracking:
+        list_traps = glob.glob(path_to_splitted_traps + '/*')
         for i, trap_path in enumerate(list_traps):
             print(f"Tracking of trap {trap_path:s}")
             imgs = np.sort(glob.glob(trap_path + '/midap/cut_im/*.png'))
@@ -542,12 +555,15 @@ def main():
     ###################################
 
     if not args.no_mother:
+        list_traps = glob.glob(path_to_splitted_traps + '/*')
         for i, trap_path in enumerate(list_traps):
             id_the_mother(trap_path)
 
     ###################################
     # step 6 : Get the fluorescence values of each mother cell
     ###################################
+
+    list_traps = glob.glob(path_to_splitted_traps + '/*')
     for i, trap_path in enumerate(list_traps):
         get_fluorescence_data(trap_path, Nmax, fluor_offset, fluor_step)
         generate_summary_plots(trap_path)
