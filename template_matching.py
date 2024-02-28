@@ -34,7 +34,7 @@ def create_summary(input_file, time_value1=0, time_value2=0):
             summary[key] = summary.pop(f"T{key}")
         summary = collections.OrderedDict(sorted(summary.items()))
     with open(
-        input_file.replace(".tif", "csv"), "w", encoding="utf-8"
+            input_file.replace(".tif", "csv"), "w", encoding="utf-8"
     ) as csv_file:
         writer = csv.writer(csv_file)
         for key, value in summary.items():
@@ -75,7 +75,8 @@ def arguments():
         "--input_image",
         help="Input image including the full path for extraction",
         type=str,
-        default="/Users/tarunchadha/Documents/yeast_ageing/ageing_movie_examples/2021-12-15_ageing_optoControls_lightOff_Pos9_BF-1.tif",  # required=True,
+        default="/Users/tarunchadha/Documents/yeast_ageing/ageing_movie_examples/2021-12-15_ageing_optoControls_lightOff_Pos9_BF-1.tif",
+        # required=True,
     )
     parser.add_argument(
         "-t",
@@ -182,12 +183,12 @@ def preprocess(image_data):
 
 
 def template_matching(
-    image_data,
-    template,
-    output_folder,
-    threshold=0.7,
-    width_height=(0.9, 0.9),
-    methods=("TM_CCOEFF_NORMED",),
+        image_data,
+        template,
+        output_folder,
+        threshold=0.7,
+        width_height=(0.9, 0.9),
+        methods=("TM_CCOEFF_NORMED",),
 ):
     """Function to find instances of a template in an image
 
@@ -206,6 +207,7 @@ def template_matching(
     width_im, height_im = image_data.shape[::-1]
     crop_points = {}
     for method in methods:
+        print(eval(method))
         res = matchTemplate(image_data, template, eval(method))
         loc = np.where(res >= threshold)
         image_data_tmp = image_data
@@ -216,14 +218,14 @@ def template_matching(
             # print(pt[0] + w, pt[1] + h)
             # cv.rectangle(image_data_tmp, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
             if (
-                mask[
-                    point[1] + int(round(height / 2)),
-                    point[0] + int(round(width / 2)),
-                ]
-                != 255
+                    mask[
+                        point[1] + int(round(height / 2)),
+                        point[0] + int(round(width / 2)),
+                    ]
+                    != 255
             ):
                 mask[
-                    point[1] : point[1] + height, point[0] : point[0] + width
+                point[1]: point[1] + height, point[0]: point[0] + width
                 ] = 255
                 rectangle(
                     image_data_tmp,
@@ -401,8 +403,8 @@ def main(input_image,
          threshold=0.7,
          extra_width=0.9,
          extra_height=0.9,
-         methods=("TM_CCOEFF_NORMED",)):
-
+         methods=('TM_CCOEFF_NORMED',)
+         ):
     """Template matching pipeline"""
 
     timestamp = datetime.now().strftime("%Y-%m-%d")
@@ -411,40 +413,42 @@ def main(input_image,
         os.mkdir(Path(output_folder) / timestamp)
         output_folder = Path(output_folder) / timestamp
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
-        filename=f"{output_folder}/template_matching.log",  # the log file name
-        filemode="w",  # mode in which to open the file (write mode here)
-    )
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s %(levelname)s %(message)s",
+            filename=f"{output_folder}/template_matching.log",  # the log file name
+            filemode="w",  # mode in which to open the file (write mode here)
+        )
 
-    raw_image_data, first_image_data = read_image(input_image)
+        raw_image_data, first_image_data = read_image(input_image)
 
-    if template_image:
-        template_data, _ = read_image(template_image)
+        if template_image:
+            template_data, _ = read_image(template_image)
+        else:
+            [template_data] = create_template(first_image_data,
+                                              input_image,
+                                              output_folder)
+
+        image_array = preprocess(raw_image_data)
+        template_array = preprocess(template_data)
+
+        crop_points = template_matching(
+            image_array,
+            template_array,
+            output_folder,
+            threshold=threshold,
+            width_height=(extra_width, extra_height),
+            methods=methods,
+        )
+
+        split_data(input_image,
+                   raw_image_data,
+                   crop_points,
+                   input_mask,
+                   output_folder)
     else:
-        [template_data] = create_template(first_image_data,
-                                          input_image,
-                                          output_folder)
 
-    image_array = preprocess(raw_image_data)
-
-    template_array = preprocess(template_data)
-
-    crop_points = template_matching(
-        image_array,
-        template_array,
-        output_folder,
-        threshold=threshold,
-        width_height=(extra_width, extra_height),
-        methods=tuple(methods.split(",")),
-    )
-
-    split_data(input_image,
-               raw_image_data,
-               crop_points,
-               input_mask,
-               output_folder)
+        output_folder = Path(output_folder) / timestamp
 
     return output_folder
 

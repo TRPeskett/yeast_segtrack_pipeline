@@ -65,30 +65,9 @@ def crop_image(
     cropped_ims[0].save(
         output_image, save_all=True, append_images=cropped_ims[1:]
     )
+
     return cropped_ims
 
-
-def crop_image_frame_by_frame(
-    x_min: int,
-    y_min: int,
-    x_max: int,
-    y_max: int,
-    input_image_data,
-    ):
-
-    """Crop an image based on the provided coordinates
-
-    Args:
-        x_min (int): x_min
-        y_min (int): y_min
-        x_max (int): x_max
-        y_max (int): y_max
-    """
-    cropped_ims = ImageSequence.all_frames(
-        input_image_data,
-        lambda im_frame: im_frame.crop((x_min, y_min, x_max, y_max)),
-    )
-    return cropped_ims
 
 def crop_frame(
     x_min: int,
@@ -164,49 +143,6 @@ def extract_data(
                     indices[0] : indices[1], indices[2] : indices[3]
                 ]
 
-def extract_data_frame_by_frame(
-    x_min: int,
-    y_min: int,
-    x_max: int,
-    y_max: int,
-    mask,
-    output_name,
-):
-    """Extract data corresponding to the cropped image from the hdf5 file
-
-    Args:
-        x_min (int): x_min
-        y_min (int): y_min
-        x_max (int): x_max
-        y_max (int): y_max
-    """
-    subset_rect = (x_min, y_min, x_max, y_max)
-    data = h5py.File(mask, "r")
-
-    with h5py.File(output_name, "a") as subset:
-        for key, _ in data.items():
-            print("key",key)
-                # creating the new dataset
-            grp = subset.create_group(key)
-                # Subsetting the data
-            for key2, _ in data[key].items():
-                print('key2',key2)
-                grp.create_dataset(
-                    key2,
-                    shape=(
-                        subset_rect[3] - subset_rect[1],
-                        subset_rect[2] - subset_rect[0],
-                    ),
-                )
-                indices = (
-                    subset_rect[1],
-                    subset_rect[3],
-                    subset_rect[0],
-                    subset_rect[2],
-                )
-                grp[key2][:, :] = data[key][key2][
-                    indices[0] : indices[1], indices[2] : indices[3]
-                ]
 
 def extract_data_from_frame(
     x_min: int,
