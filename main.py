@@ -167,19 +167,19 @@ def adapt_output_to_midap(root_path, frame_ini, frame_end):
 
         mask = h5py.File(maskfile, "r")
         group = "FOV0"
-        list_dset_num = range(frame_ini, frame_end)
+        list_dset_num = range(frame_ini, frame_end+1)
 
         for n in list_dset_num:
             dset = 'T' + str(n)
             arr = mask[group][dset][:]
             arr = arr.astype(np.uint16)
 
-            tiffwrite(trap_path + '/midap/seg_im/im_' + f"{n:03d}" + '.tif', arr, 'XY')
+            tiffwrite(trap_path + '/midap/seg_im/im_frame' + f"{n:03d}" + '_seg.tif', arr, 'XY')
 
         im = io.imread(tiffile)
-        for n in range(frame_ini, frame_end):
+        for n in range(frame_ini, frame_end+1):
             im_for_png = Image.fromarray(im[n])
-            im_for_png.save(trap_path + "/midap/cut_im/im_" + f"{n:03d}" + ".png")
+            im_for_png.save(trap_path + "/midap/cut_im/im_frame" + f"{n:03d}" + "_cut.png")
 
 
 def arguments():
@@ -201,7 +201,7 @@ def arguments():
         "-fo",
         "--fluor_offset",
         help="How many frames before the first fluorescence frame ?",
-        type=str,
+        type=int,
         required=True
     )
 
@@ -209,7 +209,7 @@ def arguments():
         "-fs",
         "--fluor_step",
         help="How many frames in between fluorescence frames ?",
-        type=str,
+        type=int,
         required=True
     )
 
@@ -272,7 +272,6 @@ def main():
     fluor_step = args.fluor_step
     fluor_offset = args.fluor_offset
 
-
     im = io.imread(path_to_full_movie)
     Nmax = im.shape[0]
     frame_ini = 0
@@ -285,13 +284,15 @@ def main():
     ###################################
 
     if not args.no_segmentation:
+        print('\n')
+        print('Running the segmentation :')
         reader = nd.Reader("", path_to_first_mask, path_to_full_movie)
         LaunchInstanceSegmentation(reader, image_type=None, fov_indices=[0], time_value1=frame_ini,
                                    time_value2=frame_end,
                                    thr_val=0.9,
                                    min_seed_dist=5, path_to_weights=path_to_weights, device='cuda')
 
-        print('Segmentation step done')
+        print('\n Segmentation step done')
         print("Post-processing of the segmentation : overwriting fluor. frames")
 
         fluorescence.remove_fluor_frames(path_to_full_movie,
@@ -339,8 +340,15 @@ def main():
             imgs = np.sort(glob.glob(trap_path + '/midap/cut_im/*.png'))
             segs = np.sort(glob.glob(trap_path + '/midap/seg_im/*.tif'))
 
-            bst = BayesianCellTracking(imgs=imgs, segs=segs, model_weights=None)
-            data_file, csv_file = bst.track_all_frames(trap_path + '/midap')
+            try :
+                bst = BayesianCellTracking(imgs=imgs, segs=segs, model_weights=None)
+                data_file, csv_file = bst.track_all_frames(trap_path + '/midap')
+            except Exception as e:
+                print('\n')
+                print(f"Failed for trap {trap_path:s}")
+                print(e)
+                print('\n')
+                pass
 
             print("Tracking saved in ", data_file, csv_file)
 
@@ -352,7 +360,12 @@ def main():
     if not args.no_mother:
         list_traps = glob.glob(str(path_to_splitted_traps) + '/split_data/*')
         for i, trap_path in enumerate(list_traps):
-            posttreatment.id_the_mother(trap_path)
+            print(f'Finding mother cell for {trap_path:s}. Is the trap empty for all frames?')
+            try:
+                posttreatment.id_the_mother(trap_path)
+            except FileNotFoundError :
+                print(f"File not found for {trap_path:s}")
+                pass
 
     ###################################
     # step 6 : Get the fluorescence values of each mother cell
@@ -361,8 +374,13 @@ def main():
     list_traps = glob.glob(str(path_to_splitted_traps) + '/split_data/*')
     for i, trap_path in enumerate(list_traps):
         print(f'Treating fluorescence data from {trap_path:s}')
-        fluorescence.get_fluorescence_data(trap_path, Nmax, fluor_offset, fluor_step)
-        posttreatment.generate_summary_plots(trap_path)
+
+        try:
+            fluorescence.get_fluorescence_data(trap_path, Nmax, fluor_offset, fluor_step)
+            posttreatment.generate_summary_plots(trap_path)
+        except FileNotFoundError :
+            print(f"File not found for {trap_path:s}")
+            pass
 
 
 if __name__ == '__main__':

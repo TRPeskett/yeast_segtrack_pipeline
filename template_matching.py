@@ -207,7 +207,7 @@ def template_matching(
     width_im, height_im = image_data.shape[::-1]
     crop_points = {}
     for method in methods:
-        print(eval(method))
+
         res = matchTemplate(image_data, template, eval(method))
         loc = np.where(res >= threshold)
         image_data_tmp = image_data
