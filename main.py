@@ -189,33 +189,41 @@ def arguments():
         description="Run the segmentation and tracking pipeline",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    # parser.add_argument(
-    #     "-i",
-    #     "--input_image",
-    #     help="Input image including the full path for extraction",
-    #     type=str,
-    #     required=True
-    # )
-    # parser.add_argument(
-    #     "-t",
-    #     "--template_image",
-    #     help="Template image including the full path for extraction",
-    #     type=str,
-    #
-    # )
+    parser.add_argument(
+        "-i",
+        "--input_movie",
+        help="Path to the input movie",
+        type=str,
+        required=True
+    )
+
+    parser.add_argument(
+        "-fo",
+        "--fluor_offset",
+        help="How many frames before the first fluorescence frame ?",
+        type=str,
+        required=True
+    )
+
+    parser.add_argument(
+        "-fs",
+        "--fluor_step",
+        help="How many frames in between fluorescence frames ?",
+        type=str,
+        required=True
+    )
+
+    parser.add_argument(
+        "-t",
+        "--template",
+        help="Path to a template of an empty trap",
+        type=str,
+    )
 
     parser.add_argument(
         "-no_s",
         "--no_segmentation",
         help="Exclude the segmentation step from the pipeline",
-        default=False,
-        action='store_true'
-    )
-
-    parser.add_argument(
-        "-no_spl",
-        "--no_splitting_traps",
-        help="Exclude the step that splits the main movie by trap",
         default=False,
         action='store_true'
     )
@@ -248,24 +256,25 @@ def arguments():
 
 
 def main():
-    fluor_step = 6  # this should be an argument
-    fluor_offset = 9  # idem
 
     load_dotenv()
+    args = arguments()
 
-    path_to_full_movie = os.getenv('FULL_MOVIE_YEAST')
+    path_to_full_movie = args.input_movie#os.getenv('FULL_MOVIE_YEAST')
     path_to_weights = os.getenv('WEIGHTS_YEAST')
-    path_to_template = os.getenv('TEMPLATE_YEAST_TRAP')
+    path_to_template = args.template
 
     path_to_first_mask = path_to_full_movie.split(".tif")[0]
     path_to_first_mask = path_to_first_mask + '.h5'
     filename = path_to_full_movie.split('/')[-1]
     filename = filename.split('.')[0]
 
-    args = arguments()
+    fluor_step = args.fluor_step
+    fluor_offset = args.fluor_offset
+
 
     im = io.imread(path_to_full_movie)
-    Nmax = 3 #im.shape[0]
+    Nmax = im.shape[0]
     frame_ini = 0
     frame_end = Nmax - 1
 

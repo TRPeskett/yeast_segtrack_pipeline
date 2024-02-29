@@ -407,7 +407,7 @@ def main(input_image,
          ):
     """Template matching pipeline"""
 
-    timestamp = datetime.now().strftime("%Y-%m-%d")
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     if not os.path.isdir(Path(output_folder) / timestamp):
         os.mkdir(Path(output_folder) / timestamp)
