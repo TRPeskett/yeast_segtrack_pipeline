@@ -5,11 +5,23 @@ import pandas as pd
 import numpy as np
 import glob
 
-def remove_fluor_frames(path_to_full_movie,
-                        path_to_first_mask,
-                        filename,
-                        fluor_offset,
-                        fluor_step):
+
+def remove_fluor_frames(path_to_full_movie: str,
+                        path_to_first_mask: str,
+                        filename: str,
+                        fluor_offset: int,
+                        fluor_step: int) -> None:
+    """
+    This routine will create a new movie and a new maskfile, where all the fluorescence
+    frames have been *overwritten* by the frame that precedes them.
+
+    path_to_full_movie : path to the initial input movie
+    path_to_first_mask : path to the first mask created by the segmentation step
+    filename : name of the initial file (suffix removed)
+    fluor_offset : number of frames before the first frame
+    fluor_step : number of frames in between fluorescence frames
+    """
+
     im = io.imread(path_to_full_movie)
     data = h5py.File(path_to_first_mask, "r+")
     data_no_fluor = h5py.File('./output/' + filename + "_no_fluor.h5", "w")
@@ -42,16 +54,35 @@ def remove_fluor_frames(path_to_full_movie,
     data_no_fluor.close()
 
 
-def get_fluorescence_data(trap_path, Nmax, fluor_offset, fluor_step):
-    track_df = pd.read_csv(trap_path + '/tracking_with_mother.csv')
-    list_fluor_frames = np.linspace(fluor_offset,
-                                    Nmax - 1,
-                                    int((Nmax - fluor_offset) / fluor_step) + 1)
+def get_fluorescence_data(initial_movie_path: str,
+                          trap_path: str,
+                          Nmax: int,
+                          fluor_offset: int,
+                          fluor_step: int) -> None:
+    """
+    This routine will extract the fluorescence data : it will go and grab the
+    fluorescence frames and mask from the initial movie, and then it will
+    apply the mask of the previous frame to the fluorescence frame. All pixels
+    inside the mask are extracted and saved, with additional values such as avg, std, etc.
 
-    h5data_path = glob.glob('./input/example_movie/*.h5')
+    trap_path : path to the trap of interest
+    Nmax : total number of frames in movie
+    fluor_offset : number of frames before the first fluorescence frames
+    fluor_step : number fo frames in between each fluorescence frame
+    """
+    track_df = pd.read_csv(trap_path + '/tracking_with_mother.csv')
+
+    list_fluor_frames = [fluor_offset]
+    cpt = fluor_offset
+
+    while cpt <= Nmax - fluor_step:
+        list_fluor_frames.append(list_fluor_frames[-1] + fluor_step)
+        cpt += fluor_step
+
+    h5data_path = glob.glob(initial_movie_path + '*.h5')
     data_fluor = h5py.File(h5data_path[0], 'r')
 
-    tifdata_path = glob.glob('./input/example_movie/*.tif')
+    tifdata_path = glob.glob(initial_movie_path + '*.tif')
     im = io.imread(tifdata_path[0])
 
     group = list(data_fluor.keys())[0]
@@ -65,6 +96,7 @@ def get_fluorescence_data(trap_path, Nmax, fluor_offset, fluor_step):
     track_df['fluor_max'] = -1.
     track_df['fluor_std'] = -1.
     track_df['fluorescence_values'] = 'none'
+
     for i_frame in list_fluor_frames:
         i_mask = int(i_frame - 1.)
         i_fluor = int(i_frame)

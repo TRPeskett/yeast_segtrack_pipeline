@@ -1,9 +1,7 @@
 import template_matching
 
-import time
 import tqdm
 from dotenv import load_dotenv
-import sys
 
 from yeaz.unet.segment import segment
 from yeaz.disk import Reader as nd
@@ -23,7 +21,6 @@ from PIL import Image, ImageSequence
 from midap.tracking.bayesian_tracking import BayesianCellTracking
 
 import numpy as np
-import pandas as pd
 from skimage.registration import phase_cross_correlation
 from scipy import ndimage
 import posttreatment
@@ -32,25 +29,30 @@ import fluorescence
 
 def LaunchPrediction(im, mic_type, pretrained_weights=None, device='cpu'):
     """It launches the neural neutwork on the current image and creates
-    an hdf file with the prediction for the time T and corresponding FOV.
+    a hdf file with the prediction for the time T and corresponding FOV.
     """
     im = skimage.exposure.equalize_adapthist(im)
-    im = im * 1.0;
+    im = im * 1.0
     pred = nn.prediction(im, mic_type, pretrained_weights, device=device)
     return pred
 
 
 def ThresholdPred(thvalue, pred):
     """Thresholds prediction with value"""
-    if thvalue == None:
+    if thvalue is None:
         thresholdedmask = nn.threshold(pred)
     else:
         thresholdedmask = nn.threshold(pred, thvalue)
     return thresholdedmask
 
 
-def LaunchInstanceSegmentation(reader, image_type, fov_indices=[0], time_value1=0, time_value2=0, thr_val=None,
-                               min_seed_dist=5, path_to_weights=None, device='cpu'):
+def LaunchInstanceSegmentation(reader, image_type,
+                               fov_indices=None, time_value1=0, time_value2=0,
+                               thr_val=None,
+                               min_seed_dist=5,
+                               path_to_weights=None, device='cpu'):
+    if fov_indices is None:
+        fov_indices = [0]
     if (device == 'cuda') and torch.cuda.is_available():
         f_device = 'cuda'
     else:
@@ -104,8 +106,14 @@ def LaunchInstanceSegmentation(reader, image_type, fov_indices=[0], time_value1=
             reader.SaveMask(t, fov_ind, temp_mask)
 
 
+def correct_shift_in_mask(mask: str, list_shifts: dict) -> None:
+    '''
+    Correct the drift/shift of the movie on maskfiles.
+    Will *replace* the original mask with the corrected mask
 
-def correct_shift_in_mask(mask, list_shifts):
+    mask : path to mask file to correct
+    list_shifts : dictionary containing the shifts per frame
+    '''
     with h5py.File(mask, "r+") as f_masks:
         for group in f_masks.keys():
             for dset in f_masks[group].keys():
@@ -117,7 +125,16 @@ def correct_shift_in_mask(mask, list_shifts):
                 f_masks[group][dset][...] = shifted_mask
 
 
-def correct_shift(path_to_image, mask):
+def correct_shift(path_to_image: str, mask: str) -> list:
+    '''
+    Will correct the shift/drift of the movie (stack tif file) with respect to the
+    first frame. The corrected images are the output (no saving here).
+    The corresponding masks will also be corrected by calling
+    the correct_shift_in_mask routine.
+
+    path_to_image : path to the image that needs shift correction
+    mask : path to mask corresponding to the image
+    '''
     data = Image.open(path_to_image)
     frames = ImageSequence.all_frames(data)
 
@@ -140,15 +157,21 @@ def correct_shift(path_to_image, mask):
     return list_of_shifted_images
 
 
+def adapt_output_to_midap(root_path: str, frame_ini: int, frame_end: int) -> None:
+    '''
+    This routine will take in a stack of tif images and the corresponding h5 mask
+    and then will create the midap folder, containing :
+    - cut_im = one png image per frame, named to respec the convention expected in midap
+    - seg_im = masks in tif format, one per frame, same expected naming convention
 
+    root_path: path to the outputs
+    frame_ini: initial frame (usually 0)
+    frame_end: final frame of the movie
+    '''
 
-
-def adapt_output_to_midap(root_path, frame_ini, frame_end):
     list_traps = glob.glob(str(root_path) + '/split_data/*')
     list_traps.sort()
 
-    # print(root_path)
-    # print("++++++++++++",list_traps)
     for i, trap_path in enumerate(list_traps):
         print(f"Converting to midap format trap {trap_path:s}")
 
@@ -167,7 +190,7 @@ def adapt_output_to_midap(root_path, frame_ini, frame_end):
 
         mask = h5py.File(maskfile, "r")
         group = "FOV0"
-        list_dset_num = range(frame_ini, frame_end+1)
+        list_dset_num = range(frame_ini, frame_end + 1)
 
         for n in list_dset_num:
             dset = 'T' + str(n)
@@ -177,7 +200,7 @@ def adapt_output_to_midap(root_path, frame_ini, frame_end):
             tiffwrite(trap_path + '/midap/seg_im/im_frame' + f"{n:03d}" + '_seg.tif', arr, 'XY')
 
         im = io.imread(tiffile)
-        for n in range(frame_ini, frame_end+1):
+        for n in range(frame_ini, frame_end + 1):
             im_for_png = Image.fromarray(im[n])
             im_for_png.save(trap_path + "/midap/cut_im/im_frame" + f"{n:03d}" + "_cut.png")
 
@@ -209,6 +232,22 @@ def arguments():
         "-fs",
         "--fluor_step",
         help="How many frames in between fluorescence frames ?",
+        type=int,
+        required=True
+    )
+
+    parser.add_argument(
+        "-tx",
+        "--trap_x",
+        help="",
+        type=int,
+        required=True
+    )
+
+    parser.add_argument(
+        "-ty",
+        "--trap_y",
+        help="",
         type=int,
         required=True
     )
@@ -256,11 +295,12 @@ def arguments():
 
 
 def main():
+    # trap_center_size = [21, 41]
 
     load_dotenv()
     args = arguments()
 
-    path_to_full_movie = args.input_movie#os.getenv('FULL_MOVIE_YEAST')
+    path_to_full_movie = args.input_movie  # os.getenv('FULL_MOVIE_YEAST')
     path_to_weights = os.getenv('WEIGHTS_YEAST')
     path_to_template = args.template
 
@@ -296,10 +336,10 @@ def main():
         print("Post-processing of the segmentation : overwriting fluor. frames")
 
         fluorescence.remove_fluor_frames(path_to_full_movie,
-                            path_to_first_mask,
-                            filename,
-                            fluor_offset,
-                            fluor_step)
+                                         path_to_first_mask,
+                                         filename,
+                                         fluor_offset,
+                                         fluor_step)
 
     print('\n')
 
@@ -340,17 +380,16 @@ def main():
             imgs = np.sort(glob.glob(trap_path + '/midap/cut_im/*.png'))
             segs = np.sort(glob.glob(trap_path + '/midap/seg_im/*.tif'))
 
-            try :
+            try:
                 bst = BayesianCellTracking(imgs=imgs, segs=segs, model_weights=None)
                 data_file, csv_file = bst.track_all_frames(trap_path + '/midap')
+                print("Tracking saved in ", data_file, csv_file)
             except Exception as e:
                 print('\n')
                 print(f"Failed for trap {trap_path:s}")
                 print(e)
                 print('\n')
                 pass
-
-            print("Tracking saved in ", data_file, csv_file)
 
     print("\n")
     ###################################
@@ -360,11 +399,11 @@ def main():
     if not args.no_mother:
         list_traps = glob.glob(str(path_to_splitted_traps) + '/split_data/*')
         for i, trap_path in enumerate(list_traps):
-            print(f'Finding mother cell for {trap_path:s}. Is the trap empty for all frames?')
+            print(f'Finding mother cell for {trap_path:s}')
             try:
                 posttreatment.id_the_mother(trap_path)
-            except FileNotFoundError :
-                print(f"File not found for {trap_path:s}")
+            except FileNotFoundError:
+                print(f"File not found for {trap_path:s}. Is the trap empty for all frames?")
                 pass
 
     ###################################
@@ -378,7 +417,7 @@ def main():
         try:
             fluorescence.get_fluorescence_data(trap_path, Nmax, fluor_offset, fluor_step)
             posttreatment.generate_summary_plots(trap_path)
-        except FileNotFoundError :
+        except FileNotFoundError:
             print(f"File not found for {trap_path:s}")
             pass
 

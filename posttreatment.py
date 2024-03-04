@@ -3,7 +3,18 @@ import numpy as np
 import h5py
 import matplotlib.pyplot as plt
 
-def id_the_mother(path):
+
+def id_the_mother(path: str, trap_center_size: list) -> None:
+    '''
+    Uses the csv file resulting from the tracking step to identify the mother cell;
+    The criteria being that the mother cell is the cell that stays in the center
+    of the trap for the longest time in the entire movie. As it is a "max" criteria
+    on the number of frames, there is only one mother cell per trap for the entire movie
+
+    path : path to the folder containing splitted traps
+    trap_center_size : size, in px, of the center of the trap
+    '''
+
     # first, read the necessary input datas.
     # The pandas package seems a convenient option for the csv file
 
@@ -16,7 +27,6 @@ def id_the_mother(path):
         dset = f[a_group_key[0]]
         masks = list(dset)
 
-    trap_center_size = [21, 41]
     image_size = np.shape(masks[0])
     trap_center_upper_left = [(image_size[0] - trap_center_size[0]) / 2,
                               (image_size[1] - trap_center_size[1]) / 2]
@@ -51,14 +61,12 @@ def id_the_mother(path):
     unique_cells = tracking_table['trackID'].unique()
 
     max_frames = 0
-    mother = -1
     index_list_save = []
     for cell in unique_cells:
         index_list = list(tracking_table.loc[(tracking_table['trackID'] == cell) &
                                              (tracking_table['Type'] == 'trapped')].index)
 
         if len(index_list) > max_frames:
-            mother = cell
             max_frames = len(index_list)
             index_list_save = index_list
 
@@ -66,9 +74,16 @@ def id_the_mother(path):
         tracking_table.loc[[index], 'Type'] = "mother"
 
     tracking_table.to_csv(path + '/tracking_with_mother.csv')
-    # this is the mother cell - you have won this game \o/
 
-def generate_summary_plots(trap_path):
+
+def generate_summary_plots(trap_path: str) -> None:
+    '''
+    Will generate two plats per trap : the evolution of the size of the
+    mother cell with frame, and the evolution of the average fluorescence
+    value with frame.
+
+    trap_path : path to the directory containing the movie in splitted traps
+    '''
     trap_nb = trap_path.split('/')[-1]
 
     full_df = pd.read_csv(trap_path + '/tracking_with_fluor.csv')
@@ -86,7 +101,6 @@ def generate_summary_plots(trap_path):
             reconstructed_list.append(float(val))
         list_of_fluor_arrays.append(reconstructed_list)
 
-
     # the second value is a string, but we only need
     # the number of elements separated by the comma
     # = number of fluor px to get an indication on the cell size :
@@ -97,7 +111,7 @@ def generate_summary_plots(trap_path):
                                    size_cell(fluor_val_arr)[:]))
 
     plt.rcParams["figure.figsize"] = (12, 10)
-    fig, axs = plt.subplots(3)
+    fig, axs = plt.subplots(2)
 
     l1, = axs[0].plot(fluor_stat_arr[:, 0], fluor_stat_arr[:, 1])
     l2, = axs[0].plot(fluor_stat_arr[:, 0], fluor_stat_arr[:, 2])
@@ -110,11 +124,6 @@ def generate_summary_plots(trap_path):
     axs[1].set_title('Size of the cell')
     axs[1].set_xlabel('Frame number')
     axs[1].set_ylabel('Size of cell (number of px)')
-
-    axs[2].hist(list_of_fluor_arrays, 50, histtype='bar', stacked=False)
-    axs[2].set_xlabel('Histogram of fluorescence value')
-    axs[2].set_xlabel('Fluorescence value')
-    axs[2].set_ylabel('Count')
 
     plt.savefig(trap_path + '/summary_trap_' + trap_nb + '.png')
     plt.close()
