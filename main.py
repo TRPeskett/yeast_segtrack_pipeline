@@ -239,7 +239,7 @@ def arguments():
     parser.add_argument(
         "-tx",
         "--trap_x",
-        help="",
+        help="width of the center of the trap, in px",
         type=int,
         required=True
     )
@@ -247,7 +247,7 @@ def arguments():
     parser.add_argument(
         "-ty",
         "--trap_y",
-        help="",
+        help="height of the center of the trap, in px",
         type=int,
         required=True
     )
@@ -295,12 +295,10 @@ def arguments():
 
 
 def main():
-    # trap_center_size = [21, 41]
-
     load_dotenv()
     args = arguments()
 
-    path_to_full_movie = args.input_movie  # os.getenv('FULL_MOVIE_YEAST')
+    path_to_full_movie = args.input_movie
     path_to_weights = os.getenv('WEIGHTS_YEAST')
     path_to_template = args.template
 
@@ -316,6 +314,10 @@ def main():
     Nmax = im.shape[0]
     frame_ini = 0
     frame_end = Nmax - 1
+
+    trap_center_size = [args.trap_y, args.trap_x]
+    folder_init_movie = Path(path_to_full_movie)
+    folder_init_movie = str(folder_init_movie.parent)
 
     ###################################
     # step 1 : do the segmentation of the full movie [code from launch_NN_commandline]
@@ -401,7 +403,7 @@ def main():
         for i, trap_path in enumerate(list_traps):
             print(f'Finding mother cell for {trap_path:s}')
             try:
-                posttreatment.id_the_mother(trap_path)
+                posttreatment.id_the_mother(trap_path, trap_center_size)
             except FileNotFoundError:
                 print(f"File not found for {trap_path:s}. Is the trap empty for all frames?")
                 pass
@@ -415,7 +417,9 @@ def main():
         print(f'Treating fluorescence data from {trap_path:s}')
 
         try:
-            fluorescence.get_fluorescence_data(trap_path, Nmax, fluor_offset, fluor_step)
+            fluorescence.get_fluorescence_data(folder_init_movie,
+                                               trap_path,
+                                               Nmax, fluor_offset, fluor_step)
             posttreatment.generate_summary_plots(trap_path)
         except FileNotFoundError:
             print(f"File not found for {trap_path:s}")

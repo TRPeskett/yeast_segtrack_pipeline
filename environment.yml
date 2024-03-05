@@ -1,4 +1,4 @@
-name: midap2
+name: segtrack
 channels:
   - defaults
   - conda-forge
@@ -130,6 +130,7 @@ dependencies:
       - napari==0.4.18
       - napari-console==0.0.9
       - napari-plugin-engine==0.2.0
+      - napari-plugin-manager==0.1.0a2
       - napari-svg==0.1.10
       - natsort==8.4.0
       - nbclient==0.9.0
@@ -184,6 +185,9 @@ dependencies:
       - pyopengl==3.1.7
       - pyparsing==3.1.1
       - pyproject-hooks==1.0.0
+      - pyqt5==5.15.10
+      - pyqt5-qt5==5.15.12
+      - pyqt5-sip==12.13.0
       - pysimplegui==4.60.5
       - pytest==7.4.3
       - python-dateutil==2.8.2

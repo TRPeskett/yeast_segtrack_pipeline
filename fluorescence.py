@@ -79,10 +79,10 @@ def get_fluorescence_data(initial_movie_path: str,
         list_fluor_frames.append(list_fluor_frames[-1] + fluor_step)
         cpt += fluor_step
 
-    h5data_path = glob.glob(initial_movie_path + '*.h5')
+    h5data_path = glob.glob(initial_movie_path + '/*.h5')
     data_fluor = h5py.File(h5data_path[0], 'r')
 
-    tifdata_path = glob.glob(initial_movie_path + '*.tif')
+    tifdata_path = glob.glob(initial_movie_path + '/*.tif')
     im = io.imread(tifdata_path[0])
 
     group = list(data_fluor.keys())[0]
