@@ -257,6 +257,7 @@ def arguments():
         "--template",
         help="Path to a template of an empty trap",
         type=str,
+        default=''
     )
 
     parser.add_argument(
