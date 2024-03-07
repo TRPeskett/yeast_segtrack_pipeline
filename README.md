@@ -143,6 +143,13 @@ Run the second command by excluding the steps that have already run :
   - in : track_output_bayesian.csv, tracking_with_mother.csv, the original movie containing fluorescence data
   - out : ./output/<timestamp>/split_data/<trap_number>/tracking_with_fluor.csv, summary_trap_<trap_number>.png
 
+# Segmentation and tracking corrections:
+Instruction on how to start the correction step for the segmentations :
+https://github.com/Microbial-Systems-Ecology/midap/wiki/Manual-Correction
+
+Instruction on how to install and use the correction step for the tracking :
+https://github.com/Microbial-Systems-Ecology/midap_manual_tracking
+
 # Miscellaneous:
 - What to do if my tiff movie does not contain fluorescence images ?
   - use the -no_fl flag and provide dummy integer values for the mandatory -fo and -fs options
