@@ -58,7 +58,7 @@ Run the example provided in the repo:
 
 On a 2022 MacBook Pro with Apple M2 chip it takes ~8 min to complete the test run.
 
-## To run on a different tif movie: 
+## To analyse another tif movie: 
 
 ### The input movie :
 The expected format is a 3D stack of images in tif format, the 3rd dimension being the time. 
