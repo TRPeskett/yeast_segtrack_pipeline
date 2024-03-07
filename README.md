@@ -13,14 +13,102 @@ The pipeline contains the midap tool that also allows manual correction of both 
 
 Please report any bug or other issue to: nmarounina@ethz.ch
 
+
+
 # Installation:
 
-How to run the pipeline:
-- conda installation
-- expected input data : tiff movie, being a 3D stack of images, the 3rd dimension being the time. The stack can contain single fluorescence images (fluorescence Z-stack are not handled).
-- necessary input arguments
-- example run
-- example run if no template for the trap
+How to install and run the pipeline with the provided example:
+
+Create and activate the conda environment :
+
+`git clone https://gitlab.ethz.ch/sis/yeast_segtrack_pipeline.git`
+
+`cd yeast_segtrack_pipeline`
+
+`conda env create --file=environment.yml`
+
+`conda activate segtrack`
+
+Download the weights for the Yeaz2 model and edit the .env file to rectify the path, so it points to newly downloaded weights.
+From https://github.com/rahi-lab/YeaZ-GUI :
+
+Download the parameters for segmenting phase contrast images from: https://drive.google.com/file/d/1tcdl34Aq11mrPVlyu0Qd4rUigw_6948b.
+
+(these are the weights that have been used for the test case)
+Download the parameters for segmenting bright-field images from: https://drive.google.com/file/d/1vnhkp54McM836yczh4F-YYJwPahbTsY0
+
+Download the parameters for segmenting fission images form: https://drive.google.com/file/d/1h_Wz2d3UY0jkGtMrhl32iEqbOQVXsmKS.
+
+Create the folder for the output data:
+
+`mkdir output`
+
+Install midap :
+
+`git clone https://github.com/Microbial-Systems-Ecology/midap.git`
+
+`cd midap` 
+
+`pip install -e .`
+
+Run the example provided in the repo:
+
+ `cd ..`
+
+ `python main.py -i ./input/small_movie.tif -t ./input/template.tif -fo 9 -fs 6 -tx 41 -ty 21`
+
+On a 2022 MacBook Pro with Apple M2 chip it takes ~8 min to complete the run. The most time-consuming step is the segmentation.
+
+## To run on a different tif movie: 
+
+### The input movie :
+The expected format is a 3D stack of images in tif format, the 3rd dimension being the time. 
+The stack can contain single fluorescence images (Z-stack in fluorescence are not yet handled).
+Fluorescence images has to be regularly spaced withing the stack, but they can start anytime within it,
+e.g. there is a fluorescence image every 8 frames, starting from the frame 21; 
+in the example movie, there is a fluorescence frame every 6 frames, starting at the frame num. 10.
+
+### Mandatory input arguments :
+mandatory input arguments are :
+- -i should be followed by the path to the input tif movie
+- -fo is the "fluorescence offset" parameter and should be the number of frames in between the beginning of the movie and the first fluorescence image.
+- -fs is the "fluorescence step" parameter and should be the spacing of fluorescence frames after they start to appear in the movie
+
+Please compare the example movie to the example command to have a clearer idea of what is expected.
+
+-tx is the width, in pixels of the center of the trap
+-ty is the height, in pixels of the center of the trap
+
+### Optional input arguments :
+The entire pipeline runs as the default behavior. To exclude some steps from the pipeline please add one or several of the following flags :
+
+- -no_s --no_segmentation : Exclude the segmentation step from the pipeline
+- -no_fm --no_format_midap : Exclude the formatting of the data for midap
+- -no_tr --no_tracking : Exclude the tracking step
+- -no_m --no_mother : Exclude the detection of the mother cell
+- -no_fl --no_fluor : Exclude the treatment of the fluorescence frames
+
+
+### How to proceed if no template is available for a given movie ?
+You will have to run the pipeleine in two steps.
+
+First, run the segmentation and tracking steps, excluding the post-treatment steps. -t argument can therefore be omitted,
+and the values for -tx and -ty arguments, while mandatory, do not really matter and can be any integer value:
+
+`python main.py -i ./input/small_movie.tif -fo 9 -fs 6 -tx 9831579 -ty 4397856 -no_m -no_fl`
+
+This run will prompt the creating of the template. Next, you would need to determine the size of the center of the trap.
+To do so, open the template image in Preview and try selecting a rectangle with your mouse, as shown here :
+![size of the trap](./add-ons/Screenshot.png)
+
+It was not possible to capture it with a screenshot for me, but as long as one toggles with the size of the rectangle, 
+one cen see its dimensions, in pixels. Those are the numbers that you will have to save for the -tx -ty arguments in the next step.
+
+Run the second command by excluding the steps that have already run :
+
+`python main.py -i ./input/small_movie.tif -fo 9 -fs 6 -tx <the_right_value> -ty <the_right_value> -no_s -no_fm -no_tr`
+
+
 
 # Description of the pipeline:
 - Step 1 : do the segmentation of the full movie 
@@ -59,3 +147,4 @@ How to run the pipeline:
 - what to do if my tiff movie does not contain fluorescence images
 - rerun tracking if segmentation has been corrected
 - what to do if I have no template
+- the traps are slightly tilted - can I reuse a template from another movie ?

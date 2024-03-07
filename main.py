@@ -241,6 +241,7 @@ def arguments():
         "--trap_x",
         help="width of the center of the trap, in px",
         type=int,
+        default=-1,
         required=True
     )
 
@@ -249,7 +250,8 @@ def arguments():
         "--trap_y",
         help="height of the center of the trap, in px",
         type=int,
-        required=True
+        default=-1,
+        required = True
     )
 
     parser.add_argument(
@@ -288,6 +290,14 @@ def arguments():
         "-no_m",
         "--no_mother",
         help="Exclude the detection of the mother cell",
+        default=False,
+        action='store_true'
+    )
+
+    parser.add_argument(
+        "-no_fl",
+        "--no_fluor",
+        help="Exclude the treatment of the fluoresence data",
         default=False,
         action='store_true'
     )
@@ -413,18 +423,19 @@ def main():
     # step 6 : Get the fluorescence values of each mother cell
     ###################################
 
-    list_traps = glob.glob(str(path_to_splitted_traps) + '/split_data/*')
-    for i, trap_path in enumerate(list_traps):
-        print(f'Treating fluorescence data from {trap_path:s}')
+    if not args.no_fluor:
+        list_traps = glob.glob(str(path_to_splitted_traps) + '/split_data/*')
+        for i, trap_path in enumerate(list_traps):
+            print(f'Treating fluorescence data from {trap_path:s}')
 
-        try:
-            fluorescence.get_fluorescence_data(folder_init_movie,
-                                               trap_path,
-                                               Nmax, fluor_offset, fluor_step)
-            posttreatment.generate_summary_plots(trap_path)
-        except FileNotFoundError:
-            print(f"File not found for {trap_path:s}")
-            pass
+            try:
+                fluorescence.get_fluorescence_data(folder_init_movie,
+                                                   trap_path,
+                                                   Nmax, fluor_offset, fluor_step)
+                posttreatment.generate_summary_plots(trap_path)
+            except FileNotFoundError:
+                print(f"File not found for {trap_path:s}")
+                pass
 
 
 if __name__ == '__main__':
