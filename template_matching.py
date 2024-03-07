@@ -408,8 +408,11 @@ def main(input_image,
     """Template matching pipeline"""
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    potential_timestamp = template_image.split('/')[-2]
 
-    if not os.path.isdir(Path(output_folder) / timestamp):
+    if not os.path.isdir(Path(output_folder) / timestamp) and not os.path.isdir(
+            Path(output_folder) / potential_timestamp):
+
         os.mkdir(Path(output_folder) / timestamp)
         output_folder = Path(output_folder) / timestamp
 
@@ -448,7 +451,7 @@ def main(input_image,
                    output_folder)
     else:
 
-        output_folder = Path(output_folder) / timestamp
+        output_folder = Path(output_folder) / potential_timestamp
 
     return output_folder
 
