@@ -2,6 +2,10 @@ import pandas as pd
 import numpy as np
 import h5py
 import matplotlib.pyplot as plt
+import glob
+from PIL import Image, ImageSequence
+import math
+import cv2
 
 
 def id_the_mother(path: str, trap_center_size: list) -> None:
@@ -127,3 +131,54 @@ def generate_summary_plots(trap_path: str) -> None:
 
     plt.savefig(trap_path + '/summary_trap_' + trap_nb + '.png')
     plt.close()
+
+
+def full_movie_for_quality_check(path_to_splitted_traps):
+    # list_traps = glob.glob(str(path_to_splitted_traps) + '/split_data/*')
+    #
+    # N = int( math.sqrt(len(list_traps)) )
+    #
+    # for trap in list_traps :
+    #     data = Image.open(trap+'/shift_corrected.tif')
+    #     frames = np.array(data)
+    #
+    #     with h5py.File(trap + '/midap/segmentations_bayesian.h5', "r") as f:
+    #         a_group_key = list(f.keys())
+    #         dset = f[a_group_key[0]]
+    #         masks = list(dset)
+    #
+    #         for i, mask in enumerate(masks):
+    #
+    #
+    #     #combine mask and tif
+    #
+    #     #append the image to the main image
+    #
+
+    return 0
+
+
+def summary_csv(path_to_splitted_traps):
+    list_traps = glob.glob(str(path_to_splitted_traps) + '/split_data/*')
+
+    all_df = []
+    cpt_id = 0
+    old_id = 1
+    for trap in list_traps:
+        trap_nb = int(trap.split('/')[-1])
+        one_df = pd.read_csv(trap + '/tracking_with_fluor.csv')
+        one_df['trap_nb'] = trap_nb
+
+        one_df['Global_id'] = 0
+
+        for index, row in one_df.iterrows():
+
+            if row['trackID'] != old_id:
+                cpt_id += 1
+                old_id = row['trackID']
+                one_df.loc[one_df['trackID'] == old_id, 'Global_id'] = cpt_id
+
+        all_df.append(one_df)
+
+    df_res = pd.concat(all_df, ignore_index=True)
+    df_res.to_csv(path_to_splitted_traps + '/all_traps_summary.csv')
