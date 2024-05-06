@@ -125,10 +125,10 @@ def correct_shift_in_mask(mask: str, list_shifts: dict) -> None:
                 f_masks[group][dset][...] = shifted_mask
 
 
-def correct_shift(path_to_image: str, mask: str) -> list:
+def correct_shift(path_to_image: str, mask: str) -> (list, dict):
     '''
     Will correct the shift/drift of the movie (stack tif file) with respect to the
-    first frame. The corrected images are the output (no saving here).
+    first frame. The corrected images are the output of the function.
     The corresponding masks will also be corrected by calling
     the correct_shift_in_mask routine.
 
@@ -154,7 +154,7 @@ def correct_shift(path_to_image: str, mask: str) -> list:
 
     correct_shift_in_mask(mask, list_shifts)
 
-    return list_of_shifted_images
+    return list_of_shifted_images, list_shifts
 
 
 def adapt_output_to_midap(root_path: str, frame_ini: int, frame_end: int) -> None:
@@ -178,12 +178,15 @@ def adapt_output_to_midap(root_path: str, frame_ini: int, frame_end: int) -> Non
         maskfile = glob.glob(list_traps[i] + '/*h5')[0]
         tiffile = glob.glob(list_traps[i] + '/*tif')[0]
 
-        list_shifted_im = correct_shift(tiffile, maskfile)
+        list_shifted_im, dict_shifts = correct_shift(tiffile, maskfile)
         list_shifted_im[0].save(list_traps[i] + '/shift_corrected.tif',
                                 save_all=True,
                                 append_images=list_shifted_im[1:])
 
         tiffile = list_traps[i] + '/shift_corrected.tif'
+
+        # with open(list_traps[i] + '/saved_shift.pkl', 'wb') as f:
+        #     pickle.dump(dict_shifts, f)
 
         Path(trap_path + '/midap/seg_im').mkdir(parents=True, exist_ok=True)
         Path(trap_path + '/midap/cut_im').mkdir(parents=True, exist_ok=True)
@@ -203,7 +206,6 @@ def adapt_output_to_midap(root_path: str, frame_ini: int, frame_end: int) -> Non
         for n in range(frame_ini, frame_end + 1):
             im_for_png = Image.fromarray(im[n])
             im_for_png.save(trap_path + "/midap/cut_im/im_frame" + f"{n:03d}" + "_cut.png")
-
 
 def arguments():
     """Parsing the input arguments"""
@@ -322,7 +324,7 @@ def main():
     fluor_offset = args.fluor_offset
 
     im = io.imread(path_to_full_movie)
-    Nmax = im.shape[0]
+    Nmax, Ndim1, Ndim2 = im.shape
     frame_ini = 0
     frame_end = Nmax - 1
 
@@ -353,13 +355,13 @@ def main():
                                          filename,
                                          fluor_offset,
                                          fluor_step)
-
     print('\n')
 
     # ###################################
     # # step 2 : separate the traps from the movie
     # ###################################
 
+    posttreatment.check_segmentation(path_to_full_movie, path_to_first_mask, './output')
     path_to_no_fluor_movie = './output/' + filename + '_no_fluor.tif'
     path_to_no_fluor_mask = './output/' + filename + "_no_fluor.h5"
 
@@ -437,6 +439,7 @@ def main():
                 print(f"File not found for {trap_path:s}")
                 pass
 
+    posttreatment.summary_csv(path_to_splitted_traps)
 
 if __name__ == '__main__':
     main()

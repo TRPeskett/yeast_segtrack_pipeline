@@ -133,27 +133,37 @@ def generate_summary_plots(trap_path: str) -> None:
     plt.close()
 
 
-def full_movie_for_quality_check(path_to_splitted_traps):
-    # list_traps = glob.glob(str(path_to_splitted_traps) + '/split_data/*')
-    #
-    # N = int( math.sqrt(len(list_traps)) )
-    #
-    # for trap in list_traps :
-    #     data = Image.open(trap+'/shift_corrected.tif')
-    #     frames = np.array(data)
-    #
-    #     with h5py.File(trap + '/midap/segmentations_bayesian.h5', "r") as f:
-    #         a_group_key = list(f.keys())
-    #         dset = f[a_group_key[0]]
-    #         masks = list(dset)
-    #
-    #         for i, mask in enumerate(masks):
-    #
-    #
-    #     #combine mask and tif
-    #
-    #     #append the image to the main image
-    #
+def check_segmentation(path_to_full_movie, path_to_first_mask, output_path):
+
+    f = Image.open(path_to_full_movie, 'r')
+    data = ImageSequence.all_frames(f)
+    frames = np.array(data)
+
+    f = h5py.File(path_to_first_mask, "r")
+    group = list(f.keys())
+    list_check_imgs = []
+    for i in range(0, len(f[group[0]])):
+        dset = 'T' + str(i)
+        mask = f[group[0]][dset][:]
+
+        rgba_frame = Image.new('RGBA', np.shape(frames[i, :, :]))
+        rgba_mask = Image.new('RGBA', np.shape(mask))
+
+        arr = frames[i, :, :] / np.max(frames[i, :, :]) * 255.
+
+        rgba_frame.paste(Image.fromarray(arr))
+        rgba_mask.paste(Image.fromarray(mask > 0.5))
+
+        rgba_final = Image.blend(rgba_frame, rgba_mask, 0.3)
+        list_check_imgs.append(rgba_final)
+
+    check_segmentation_imgs = ImageSequence.all_frames(list_check_imgs)
+
+    output_image = (output_path + '/check_segmentation.tiff')
+
+    check_segmentation_imgs[0].save(
+         output_image, save_all=True, append_images=check_segmentation_imgs[1:]
+     )
 
     return 0
 
@@ -181,4 +191,4 @@ def summary_csv(path_to_splitted_traps):
         all_df.append(one_df)
 
     df_res = pd.concat(all_df, ignore_index=True)
-    df_res.to_csv(path_to_splitted_traps + '/all_traps_summary.csv')
+    df_res.to_csv(str(path_to_splitted_traps) + '/all_traps_summary.csv')
