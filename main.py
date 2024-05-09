@@ -361,7 +361,6 @@ def main():
     # # step 2 : separate the traps from the movie
     # ###################################
 
-    posttreatment.check_segmentation(path_to_full_movie, path_to_first_mask, './output')
     path_to_no_fluor_movie = './output/' + filename + '_no_fluor.tif'
     path_to_no_fluor_mask = './output/' + filename + "_no_fluor.h5"
 
@@ -428,7 +427,7 @@ def main():
     if not args.no_fluor:
         list_traps = glob.glob(str(path_to_splitted_traps) + '/split_data/*')
         for i, trap_path in enumerate(list_traps):
-            print(f'Treating fluorescence data from {trap_path:s}')
+            print(f'Processing fluorescence data from {trap_path:s}')
 
             try:
                 fluorescence.get_fluorescence_data(folder_init_movie,
@@ -440,6 +439,9 @@ def main():
                 pass
 
     posttreatment.summary_csv(path_to_splitted_traps)
+    posttreatment.check_segmentation_and_tracking(path_to_full_movie,
+                                                  path_to_first_mask,
+                                                  path_to_splitted_traps)
 
 if __name__ == '__main__':
     main()

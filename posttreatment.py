@@ -3,7 +3,7 @@ import numpy as np
 import h5py
 import matplotlib.pyplot as plt
 import glob
-from PIL import Image, ImageSequence
+from PIL import Image, ImageSequence, ImageDraw, ImageFont
 import math
 import cv2
 
@@ -133,7 +133,8 @@ def generate_summary_plots(trap_path: str) -> None:
     plt.close()
 
 
-def check_segmentation(path_to_full_movie, path_to_first_mask, output_path):
+def check_segmentation_and_tracking(path_to_full_movie, path_to_first_mask, output_path):
+    df = pd.read_csv(str(output_path) + '/all_traps_summary.csv')
 
     f = Image.open(path_to_full_movie, 'r')
     data = ImageSequence.all_frames(f)
@@ -146,6 +147,9 @@ def check_segmentation(path_to_full_movie, path_to_first_mask, output_path):
         dset = 'T' + str(i)
         mask = f[group[0]][dset][:]
 
+        # should return a dict label: coordinates
+        tags = find_centroids_trap_and_id(mask, df, i)
+
         rgba_frame = Image.new('RGBA', np.shape(frames[i, :, :]))
         rgba_mask = Image.new('RGBA', np.shape(mask))
 
@@ -155,17 +159,57 @@ def check_segmentation(path_to_full_movie, path_to_first_mask, output_path):
         rgba_mask.paste(Image.fromarray(mask > 0.5))
 
         rgba_final = Image.blend(rgba_frame, rgba_mask, 0.3)
+
+        draw = ImageDraw.Draw(rgba_final)
+        try :
+            font = ImageFont.truetype("/System/Library/Fonts/ArialHB.ttc", size=25)
+        except OSError :
+            pass
+
+        for j in tags.keys() :
+            tags_data=tags[j].split('_')
+            trap = tags_data[0]
+            c1 = float(tags_data[1])
+            c2 = float(tags_data[2])
+
+            try:
+                draw.text( (c2, c1), str(j), (0, 0, 0), font=font)
+            except:
+                draw.text((c2, c1), str(j), (0, 0, 0))
+
         list_check_imgs.append(rgba_final)
 
     check_segmentation_imgs = ImageSequence.all_frames(list_check_imgs)
 
-    output_image = (output_path + '/check_segmentation.tiff')
+    output_image = (str(output_path) + '/check_segmentation_and_tracking.tiff')
 
     check_segmentation_imgs[0].save(
-         output_image, save_all=True, append_images=check_segmentation_imgs[1:]
-     )
+        output_image, save_all=True, append_images=check_segmentation_imgs[1:]
+    )
 
     return 0
+
+
+def find_centroids_trap_and_id(mask, df, frame):
+    list_cells = np.unique(mask)
+    list_cells = np.delete(list_cells, np.where(list_cells == 0.))
+
+    findings = {}
+    for cell_id in list_cells:
+        indices_cell = np.argwhere(mask == cell_id)
+        centroids = [np.average(indices_cell[:, 0]), np.average(indices_cell[:, 1])]
+
+        id = list(df.loc[(df['frame'] == frame) &
+                    (df['labelID'] == int(cell_id))
+                    ]['Global_id'])
+        trap = list(df.loc[(df['frame'] == frame) &
+                      (df['labelID'] == int(cell_id))
+                      ]['trap_nb'])
+
+        if id:
+            findings[id[0]] = str(trap[0])+'_'+str(centroids[0])+'_'+str(centroids[1])
+
+    return findings
 
 
 def summary_csv(path_to_splitted_traps):
