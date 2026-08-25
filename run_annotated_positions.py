@@ -13,6 +13,14 @@ Positions are ordered so that one from each experiment runs first. Three of the
 four experiments have never been through the pipeline and their templates are
 borrowed from a position that is not in the annotated set, so if an experiment is
 going to fail it should fail in the first hour rather than the ninth.
+
+This script is a personal research harness rather than part of the pipeline
+proper, and it will not run from a fresh clone of this repository. It imports
+`divisions.labels` and `divisions.rois` from a separate `yeast_division_detection`
+package, and reads hand-annotation spreadsheets and movies from a
+`yeast_division_movies` archive; neither is included here. Set
+YEAST_DIVISION_DETECTION and YEAST_MOVIES if you keep them somewhere other than
+your home directory. Nothing else in the pipeline depends on this file.
 """
 
 import csv
@@ -45,6 +53,12 @@ PYTHON = os.path.expanduser('~/miniconda3/envs/segtrack/bin/python')
 WEIGHTS = 'weights/weights_2023_finetuned'
 LEDGER = os.path.join(PIPELINE, 'annotated_runs.csv')
 
+# A run directory is named by timestamp, "%Y-%m-%d_%H-%M-%S". Match the shape
+# rather than any particular year: globbing for one year's runs silently finds
+# nothing once the year turns, which would leave `run` empty and skip both the
+# trap boxes and the pruning that keeps this script inside the free disk space.
+RUN_DIR = '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_[0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+
 EXPERIMENT = {
     '2023-05-16': '2023-05-16_ageing_optoWhi3_PBmutants',
     '2023-05-23': '2023-05-23_ageing_optoWhi3_PBmutants_noLight',
@@ -57,6 +71,12 @@ TEMPLATE = {
 }
 # one per experiment first, so a broken template shows up early
 FIRST = [('2023-05-23', 3), ('2023-07-20', 17), ('2023-05-16', 0)]
+
+
+def run_dirs():
+    """The pipeline's timestamped run directories, whatever the year."""
+    return {path for path in glob.glob(os.path.join(PIPELINE, 'output', RUN_DIR))
+            if os.path.isdir(path)}
 
 
 def positions():
@@ -150,7 +170,7 @@ def main():
         print(f'=== {date} Pos{position}: {n_frames} frames ===', flush=True)
 
         truncate(movie, local, n_frames)
-        before = set(glob.glob(os.path.join(PIPELINE, 'output', '2026-*')))
+        before = run_dirs()
 
         environment = dict(os.environ, WEIGHTS_YEAST=WEIGHTS)
         result = subprocess.run(
@@ -161,8 +181,7 @@ def main():
             cwd=PIPELINE, env=environment,
             stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
-        after = set(glob.glob(os.path.join(PIPELINE, 'output', '2026-*')))
-        made = sorted(after - before)
+        made = sorted(run_dirs() - before)
         run = made[-1] if made else ''
 
         traps = save_trap_boxes(run) if run else 0
