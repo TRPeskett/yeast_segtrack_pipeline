@@ -1,0 +1,7 @@
+# Maps the several git identities each author committed under onto one name, so
+# that `git shortlog -sn` and GitHub's contributor list credit each person once.
+
+Nadia Marounina <nmarounina@ethz.ch> <nmarounina@gmail.com>
+Nadia Marounina <nmarounina@ethz.ch> <nadejda.marounina@id.ethz.ch>
+Nadia Marounina <nmarounina@ethz.ch> nmarounina <nmarounina@gmail.com>
+Nadia Marounina <nmarounina@ethz.ch> nmarounina <nadejda.marounina@id.ethz.ch>
