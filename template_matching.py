@@ -1,5 +1,9 @@
 """
 Finds instances of a provided or selected template in an image
+
+Written by Tarun Chadha (https://github.com/chadhat). Note that the git history
+attributes this file to Nadia Marounina, who committed it; see the Credits
+section of the README.
 """
 
 import argparse

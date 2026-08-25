@@ -8,26 +8,33 @@ message: >-
 type: software
 
 authors:
-  # Original author of the pipeline. Wrote the first implementation of the
-  # segmentation, trap splitting, tracking, mother-cell and fluorescence steps
-  # (ETH Zurich, Scientific IT Services, 2023-2024).
+  # Software: wrote the original pipeline - the segmentation step, splitting the
+  # movie by trap, formatting for midap, tracking, the mother-cell heuristic and
+  # the fluorescence extraction (ETH Zurich, Scientific IT Services, 2023-2024).
   - given-names: Nadia
     family-names: Marounina
     email: nmarounina@ethz.ch
-    affiliation: >-
-      Scientific IT Services, ETH Zurich
+    affiliation: 'Scientific IT Services, ETH Zurich'
     # TODO: ask Nadia to confirm her preferred name form and add her ORCID.
     # orcid: 'https://orcid.org/0000-0000-0000-0000'
 
-  # Later development: automatic fluorescence-frame detection, trap detection
-  # and template construction, drift correction, the mother-cell stitching,
-  # tracking corrections, the regression test suite, and the model retraining
-  # workflow (2024-2025).
+  # Conceptualisation, biological input, validation and testing; and the later
+  # development of the pipeline from mid-2024 onwards.
   - given-names: Tom
     family-names: Peskett
     email: thomaspeskett@googlemail.com
     # TODO: add your affiliation and ORCID.
     # affiliation: ''
+    # orcid: 'https://orcid.org/0000-0000-0000-0000'
+
+  # Software: wrote the template matching routine (template_matching.py).
+  # Supervision of the computational side of the project.
+  - given-names: Tarun
+    family-names: Chadha
+    website: 'https://github.com/chadhat'
+    # TODO: confirm affiliation with Tarun before publishing - the line below is
+    # inferred from the project's context, not stated by him. Add his ORCID too.
+    affiliation: 'Scientific IT Services, ETH Zurich'
     # orcid: 'https://orcid.org/0000-0000-0000-0000'
 
 abstract: >-

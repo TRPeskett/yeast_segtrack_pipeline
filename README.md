@@ -11,9 +11,9 @@ microscopy (bright-field) and fluorescence data, and provides data structures co
 
 The pipeline contains the midap tool that also allows manual correction of both segmentation and tracking.
 
-The pipeline was originally written by Nadia Marounina at ETH Zurich's
-Scientific IT Services; see [Credits](#credits) below for who did what, and
-[Licence](#licence) for the terms it is available under.
+The pipeline was originally written by Nadia Marounina and Tarun Chadha at ETH
+Zurich's Scientific IT Services; see [Credits](#credits) below for who did what,
+and [Licence](#licence) for the terms it is available under.
 
 Please report bugs and other issues through the GitHub issue tracker.
 
@@ -331,21 +331,35 @@ https://github.com/Microbial-Systems-Ecology/midap_manual_tracking
 
 # Credits:
 
-**Nadia Marounina** (Scientific IT Services, ETH Zurich) wrote the pipeline.
-The original implementation - the segmentation step, splitting the movie by
-microfluidic trap, template matching, formatting for midap, the tracking step,
-the mother-cell heuristic and the extraction of fluorescence traces - is hers,
-developed between November 2023 and June 2024. Her commits are preserved in this
+**Nadia Marounina** (Scientific IT Services, ETH Zurich) - *software.* Wrote the
+pipeline. The original implementation, developed between November 2023 and June
+2024, is hers: the segmentation step, splitting the movie by microfluidic trap,
+formatting the data for midap, the tracking step, the mother-cell heuristic and
+the extraction of fluorescence traces. Her commits are preserved in this
 repository's history, and the structure of the pipeline is still the one she
 laid down.
 
-**Tom Peskett** did the later development, from mid-2024 onwards: automatic
-detection of the fluorescence frames and the frame arithmetic around them,
-automatic trap detection and template construction from the movie itself,
-drift correction, stitching the mother-cell trace across breaks in tracking,
-withholding fluorescence frames from the tracker, the minimum-cell-area filter,
-the regression test suite in `tests/`, and the model retraining workflow in
+**Tom Peskett** - *conceptualisation, biological input, validation, later
+development.* Conceived the project, supplied the biological requirements the
+pipeline is built around, and tested it against real experiments. Responsible
+for the development from mid-2024 onwards: automatic detection of the
+fluorescence frames and the frame arithmetic around them, automatic trap
+detection and template construction from the movie itself, drift correction,
+stitching the mother-cell trace across breaks in tracking, withholding
+fluorescence frames from the tracker, the minimum-cell-area filter, the
+regression test suite in `tests/`, and the model retraining workflow in
 `retrain/`.
+
+**Tarun Chadha** ([@chadhat](https://github.com/chadhat)) - *software,
+supervision.* Wrote the template matching routine, `template_matching.py`, which
+is what finds the traps in a movie and makes everything downstream of it
+possible. Supervised the computational side of the project throughout.
+
+> **A note on `git blame`.** Tarun's authorship is not visible in this
+> repository's history: `template_matching.py` arrived in the first commit,
+> committed by Nadia, so git attributes his code to her. The history records who
+> committed, which here is not the same as who wrote. This section is the
+> authoritative statement of authorship, not `git log`.
 
 The pipeline stands on three pieces of work by other groups, none of which are
 redistributed here - each is installed from its own repository:
@@ -371,5 +385,5 @@ are in that file.
 never released under an open-source licence, which means that by default it is
 "all rights reserved" and cannot be reused or redistributed without the
 permission of the copyright holders. Until a licence is agreed with Nadia
-Marounina and ETH Zurich and recorded here, treat this code as available to read
-but not to reuse.
+Marounina, Tarun Chadha and ETH Zurich and recorded here, treat this code as
+available to read but not to reuse.
