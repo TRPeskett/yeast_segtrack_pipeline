@@ -1,0 +1,111 @@
+cff-version: 1.2.0
+title: Yeast segmentation and tracking pipeline
+message: >-
+  If you use this pipeline in work that is published, please cite it using the
+  metadata in this file, and cite the underlying tools it depends on - YeaZ,
+  btrack and MIDAP - separately. Their references are listed under
+  "references" below.
+type: software
+
+authors:
+  # Original author of the pipeline. Wrote the first implementation of the
+  # segmentation, trap splitting, tracking, mother-cell and fluorescence steps
+  # (ETH Zurich, Scientific IT Services, 2023-2024).
+  - given-names: Nadia
+    family-names: Marounina
+    email: nmarounina@ethz.ch
+    affiliation: >-
+      Scientific IT Services, ETH Zurich
+    # TODO: ask Nadia to confirm her preferred name form and add her ORCID.
+    # orcid: 'https://orcid.org/0000-0000-0000-0000'
+
+  # Later development: automatic fluorescence-frame detection, trap detection
+  # and template construction, drift correction, the mother-cell stitching,
+  # tracking corrections, the regression test suite, and the model retraining
+  # workflow (2024-2025).
+  - given-names: Tom
+    family-names: Peskett
+    email: thomaspeskett@googlemail.com
+    # TODO: add your affiliation and ORCID.
+    # affiliation: ''
+    # orcid: 'https://orcid.org/0000-0000-0000-0000'
+
+abstract: >-
+  A data analysis pipeline for time-lapse microscopy of budding yeast held in
+  microfluidic traps. It takes a stack of bright-field and fluorescence TIFF
+  images and produces, for each trap, a cropped and drift-corrected movie, a
+  per-cell segmentation, cell tracks, a heuristic identification of the mother
+  cell, and the fluorescence trace of that mother cell over time.
+
+keywords:
+  - yeast
+  - budding yeast
+  - replicative ageing
+  - time-lapse microscopy
+  - microfluidics
+  - cell segmentation
+  - cell tracking
+  - image analysis
+
+license-url: 'https://github.com/OWNER/REPO#licence'  # TODO: set once agreed
+repository-code: 'https://github.com/OWNER/REPO'      # TODO: set after creation
+
+references:
+  - type: article
+    title: >-
+      A convolutional neural network segments yeast microscopy images with high
+      accuracy
+    authors:
+      - family-names: Dietler
+        given-names: Nicolas
+      - family-names: Minder
+        given-names: Matthias
+      - family-names: Gligorovski
+        given-names: Vojislav
+      - family-names: Economou
+        given-names: Augoustina Maria
+      - family-names: Joly
+        given-names: Denis Alain Henri Xavier
+      - family-names: Sadeghi
+        given-names: Ahmad
+      - family-names: Chan
+        given-names: Chun Hei Michael
+      - family-names: Koziński
+        given-names: Mateusz
+      - family-names: Weigert
+        given-names: Martin
+      - family-names: Bitbol
+        given-names: Anne-Florence
+      - family-names: Rahi
+        given-names: Sahand Jamal
+    journal: Nature Communications
+    volume: 11
+    year: 2020
+    notes: >-
+      YeaZ, the segmentation model used by this pipeline.
+      https://github.com/rahi-lab/YeaZ-GUI
+
+  - type: software
+    title: 'MIDAP: a pipeline for microbial image data analysis'
+    authors:
+      - family-names: Oschmann
+        given-names: Franziska
+      - family-names: Fluri
+        given-names: Janis
+    notes: >-
+      Used for the tracking step and for manual correction of segmentation and
+      tracking. https://github.com/Microbial-Systems-Ecology/midap
+
+  - type: software
+    title: 'btrack: Bayesian multi-object tracking'
+    authors:
+      - family-names: Ulicna
+        given-names: Kristina
+      - family-names: Vallardi
+        given-names: Giulia
+      - family-names: Charras
+        given-names: Guillaume
+      - family-names: Lowe
+        given-names: Alan R.
+    notes: >-
+      The tracking algorithm. https://github.com/quantumjot/btrack

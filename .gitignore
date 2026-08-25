@@ -1,3 +1,59 @@
-input/example_movie/
+# ---------------------------------------------------------------------------
+# Secrets and machine-specific configuration
+# ---------------------------------------------------------------------------
+# .env holds WEIGHTS_YEAST, an absolute path to the model weights on this
+# machine. See .env.example for the shape of it.
+.env
+
+# A credential for the midap service. Must never be committed.
+midap_token
+
+# ---------------------------------------------------------------------------
+# Data: inputs, outputs and model weights
+# ---------------------------------------------------------------------------
+# Microscopy movies and everything derived from them. These run to tens of
+# gigabytes and are not distributable through git.
+#
+# The two exceptions are the example movie and trap template the tests and the
+# worked example in the README depend on. They have been tracked since the
+# first release of the pipeline, so they cost nothing extra to keep.
+input/*
+!input/small_movie.tif
+!input/template.tif
 output/
-YeaZ-GUI/
+
+# YeaZ model weights (~118 MB each), downloaded during installation.
+weights/
+
+# Training crops and hand-corrected labels produced by retrain/make_crops.py.
+retrain/rounds/
+
+# ---------------------------------------------------------------------------
+# Third-party code, installed rather than vendored
+# ---------------------------------------------------------------------------
+# midap is cloned and pip-installed separately (see README installation).
+# It is a separate project by another group with its own history and licence,
+# and is not redistributed here.
+midap/
+
+# ---------------------------------------------------------------------------
+# Generated reports and media
+# ---------------------------------------------------------------------------
+*.mp4
+Rplot.png
+Sgtrack_pipeline_test_results.html
+
+# Ledger of local annotation runs, written by run_annotated_positions.py.
+annotated_runs.csv
+
+# ---------------------------------------------------------------------------
+# Editor, OS and tooling cruft
+# ---------------------------------------------------------------------------
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.idea/
+.vscode/
+*.bak
+.claude/settings.local.json

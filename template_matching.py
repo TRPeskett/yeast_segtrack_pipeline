@@ -6,6 +6,7 @@ import argparse
 import collections
 import csv
 import logging
+import sys
 import os
 from datetime import datetime
 from pathlib import Path
@@ -167,26 +168,82 @@ def read_image(input_image, frame_nb=0):
     return data, first_frame
 
 
-def preprocess(image_data):
-    """Converts an input image to 8bit if it is not already
+# below this fraction of the uint16 range, the fixed 8-bit conversion flattens
+# the image enough to cost traps. 2023 movies sit near 0.05, 2021 ones near 0.5.
+LOW_RANGE = 0.2
 
-    Args:
-        image (nd.array): _description_
 
-    Returns:
-        nd.array: _description_
+def range_used(image_data):
+    """How much of the uint16 range the image actually occupies, 0 to 1."""
+    values = np.asarray(image_data, dtype=np.float64)
+    return float(values.max() - values.min()) / 65535.0
+
+
+def should_rescale(image_data, mode='ask', movie_name=''):
+    """Whether to rescale before going to 8 bit, warning if the range is small.
+
+    `img_as_ubyte` on raw uint16 divides by a fixed 257, so an image using a
+    small part of the range arrives at the matcher nearly flat. The 2023 ageing
+    movies span about 5% of the range and reach it as values 2 to 19 out of 255;
+    the 2021 movies span about 50% and are fine. Measured on `2023-07-25 Pos22`
+    against a template cut from Pos26, rescaling took the peak match from 0.79 to
+    0.91 and the traps found from 39 to 50, where 53 is what the position's own
+    template finds. On the 2021 movies it changed nothing at all.
+
+    mode : 'ask' warns and prompts, 'always' and 'never' decide without asking.
+           A run with nothing attached to its input cannot be asked, so it
+           rescales and says so rather than hanging on a prompt nobody will see.
     """
+    if mode == 'always':
+        return True
+    if mode == 'never':
+        return False
 
+    fraction = range_used(image_data)
+    if fraction >= LOW_RANGE:
+        return False
+
+    print()
+    print(f"  WARNING: {movie_name or 'this movie'} uses only "
+          f"{100 * fraction:.1f}% of the 16-bit range.")
+    print("  Converting it to 8 bit as-is leaves the trap detection almost no")
+    print("  contrast to work on, and traps get missed - about half of them on")
+    print("  the movie this was measured on. Rescaling the image to its own")
+    print("  range first fixes that, and changes nothing on a movie that already")
+    print("  uses the range well.")
+
+    if not sys.stdin or not sys.stdin.isatty():
+        print("  Not running interactively, so rescaling. Pass --rescale never "
+              "to keep the old behaviour.")
+        return True
+
+    answer = input("  Rescale before detecting traps? [Y/n] ").strip().lower()
+    return answer in ('', 'y', 'yes')
+
+
+def preprocess(image_data, rescale=False):
+    """Convert an input image to 8 bit, optionally rescaling it first.
+
+    rescale : stretch the image to its own 0.1-99.9 percentile before converting,
+              instead of dividing the raw uint16 by a fixed 257. The percentiles
+              rather than min and max so that one hot pixel cannot set the scale.
+    """
     logging.info("Converting the image to 8bit")
 
-    return skimage.util.img_as_ubyte(np.array(image_data, dtype=np.uint16))
+    values = np.array(image_data, dtype=np.uint16)
+    if not rescale:
+        return skimage.util.img_as_ubyte(values)
+
+    low, high = np.percentile(values.astype(np.float64), (0.1, 99.9))
+    stretched = (values.astype(np.float64) - low) / max(high - low, 1.0)
+    return skimage.util.img_as_ubyte(np.clip(stretched, 0.0, 1.0))
 
 
 def template_matching(
         image_data,
         template,
         output_folder,
-        threshold=0.7,
+        threshold=0.6,
         width_height=(0.9, 0.9),
         methods=("TM_CCOEFF_NORMED",),
 ):
@@ -396,6 +453,36 @@ def create_template(img, input_image, output_folder):
 #
 #     split_data(args.input_image, raw_image_data, crop_points, args)
 
+def single_trap_split(input_image, input_mask, output_folder):
+    """Treat the whole movie as one trap, skipping the search for traps in it.
+
+    The annotated ground-truth data is supplied as crops of individual traps that
+    were made by hand, so there is nothing left to find: matching a template
+    against a crop that is already one trap would at best re-crop it tighter and
+    lose the margin the later steps need, and at worst find nothing at all.
+
+    Writes the same layout the template-matching path writes - one numbered
+    folder under split_data holding the movie and its mask - so everything
+    downstream is unchanged.
+    """
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    output_folder = Path(output_folder) / timestamp
+    output_folder.mkdir(parents=True, exist_ok=True)
+
+    raw_image_data, first_frame = read_image(input_image)
+    width, height = first_frame.size
+
+    logging.info(f"Treating {input_image} as a single trap of {width}x{height}")
+
+    split_data(input_image,
+               raw_image_data,
+               {0: (0, 0, width, height)},
+               input_mask,
+               output_folder)
+
+    return output_folder
+
+
 def main(input_image,
          input_mask,
          template_image,
@@ -403,12 +490,26 @@ def main(input_image,
          threshold=0.7,
          extra_width=0.9,
          extra_height=0.9,
-         methods=('TM_CCOEFF_NORMED',)
+         methods=('TM_CCOEFF_NORMED',),
+         match_image=None,
+         rescale='ask'
          ):
-    """Template matching pipeline"""
+    """Template matching pipeline
+
+    match_image : image to search for the traps in, if not the first frame of the
+                  movie. The cell-free background is a much better thing to match
+                  against: a generated template is a median over traps and so has
+                  the noise of no particular frame, and matching it against one
+                  raw frame scores ~0.69 where matching it against the background
+                  scores ~0.96. It also means cells can no longer sit on a trap
+                  and stop it being found.
+    """
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    potential_timestamp = template_image.split('/')[-2]
+    # a template given as a bare name, or not given at all, has no parent
+    # directory to read a previous run's timestamp out of
+    parts = str(template_image).split('/')
+    potential_timestamp = parts[-2] if len(parts) > 1 else ''
 
     if not os.path.isdir(Path(output_folder) / timestamp) and not os.path.isdir(
             Path(output_folder) / potential_timestamp):
@@ -432,8 +533,13 @@ def main(input_image,
                                               input_image,
                                               output_folder)
 
-        image_array = preprocess(raw_image_data)
-        template_array = preprocess(template_data)
+        to_match = raw_image_data if match_image is None else match_image
+        # decided once, from the image the traps are actually looked for in, and
+        # then applied to the template too - the two have to reach the matcher
+        # on the same scale or the scores mean nothing
+        rescaling = should_rescale(to_match, rescale, str(input_image))
+        image_array = preprocess(to_match, rescaling)
+        template_array = preprocess(template_data, rescaling)
 
         crop_points = template_matching(
             image_array,

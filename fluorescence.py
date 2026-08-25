@@ -6,55 +6,117 @@ import numpy as np
 import glob
 
 
-def remove_fluor_frames(path_to_full_movie: str,
-                        path_to_first_mask: str,
-                        filename: str,
-                        fluor_offset: int,
-                        fluor_step: int) -> None:
+def detect_fluor_frames(movie, min_ratio: float = 2.0) -> list:
+    """Frame indices holding a fluorescence image, worked out from intensity alone.
+
+    A fluorescence frame looks nothing like a bright-field one: on the example
+    movies the per-frame median is ~640 against ~28300, while the bright-field
+    frames agree with each other to better than 1%. So sorting the per-frame
+    medians leaves exactly one enormous gap, and the split needs no tuned
+    threshold - take the largest ratio between neighbouring sorted values, and if
+    it exceeds min_ratio the two sides are different kinds of image.
+
+    The smaller group is taken to be the fluorescence one, which also covers
+    fluorescence that is *brighter* than the bright-field rather than darker.
+
+    movie : 3D array (time, y, x)
+    min_ratio : how many times apart the two groups must be to count as
+                different kinds of image. Returns [] below this, i.e. the movie
+                is treated as bright-field throughout. 2 is already far outside
+                anything ordinary illumination drift produces, the bright-field
+                frames of the example movies agreeing to within 1%, and leaves
+                room for a fluorescence channel that is only a little brighter
+                than the bright-field rather than much darker.
     """
-    This routine will create a new movie and a new maskfile, where all the fluorescence
-    frames have been *overwritten* by the frame that precedes them.
+    medians = np.array([np.median(frame) for frame in movie], dtype=float)
+    if len(medians) < 3:
+        return []
+
+    order = np.sort(medians)
+    # guard against a zero median making the ratio meaningless
+    safe = np.maximum(order, 1e-9)
+    ratios = safe[1:] / safe[:-1]
+
+    split = int(np.argmax(ratios))
+    if ratios[split] < min_ratio:
+        return []
+
+    # anything at or below the gap is one kind of image, above it the other
+    threshold = np.sqrt(safe[split] * safe[split + 1])
+    below = np.flatnonzero(medians <= threshold)
+    above = np.flatnonzero(medians > threshold)
+
+    fluor = below if len(below) <= len(above) else above
+    return sorted(int(f) for f in fluor)
+
+
+def fluor_offset_and_step(frames: list, Nmax: int) -> tuple:
+    """(offset, step) describing a list of fluorescence frames.
+
+    Returns (None, None) when there are none. `step` is the most common spacing;
+    it is None when there is only one fluorescence frame, in which case any step
+    past the end of the movie describes it equally well.
+    """
+    if not frames:
+        return None, None
+
+    offset = int(frames[0])
+    if len(frames) == 1:
+        return offset, None
+
+    spacings, counts = np.unique(np.diff(frames), return_counts=True)
+    step = int(spacings[np.argmax(counts)])
+
+    return offset, step
+
+
+def list_fluor_frames(Nmax: int, fluor_offset: int, fluor_step: int) -> list:
+    """
+    Frame indices of the fluorescence images in a movie of Nmax frames.
+
+    Nmax : total number of frames in the movie
+    fluor_offset : number of frames before the first fluorescence frame
+    fluor_step : number of frames between two fluorescence frames
+    """
+    if fluor_step <= 0:
+        raise ValueError(f"fluor_step must be positive, got {fluor_step}")
+    return list(range(fluor_offset, Nmax, fluor_step))
+
+
+def overwrite_fluor_frames(path_to_full_movie: str,
+                           path_to_no_fluor_movie: str,
+                           frames) -> list:
+    """
+    Write a copy of the movie in which every fluorescence frame has been
+    replaced by the bright-field frame immediately before it, and return the
+    list of frames that were replaced.
+
+    This runs before the segmentation, so the network only ever sees
+    bright-field data.
 
     path_to_full_movie : path to the initial input movie
-    path_to_first_mask : path to the first mask created by the segmentation step
-    filename : name of the initial file (suffix removed)
-    fluor_offset : number of frames before the first frame
-    fluor_step : number of frames in between fluorescence frames
+    path_to_no_fluor_movie : where to write the bright-field-only movie
+    frames : indices of the fluorescence frames
     """
-
     im = io.imread(path_to_full_movie)
-    data = h5py.File(path_to_first_mask, "r+")
-    data_no_fluor = h5py.File('./output/' + filename + "_no_fluor.h5", "w")
+    frames = sorted(frames)
 
-    for group in data.keys():
-        g1 = data_no_fluor.create_group(group)
-        for i in range(0, len(data[group].keys())):
-            dset = 'T' + str(i)
+    for frame_num in frames:
+        if frame_num == 0:
+            # nothing before it to copy; fall back to the first bright-field frame
+            following = [f for f in range(1, len(im)) if f not in frames]
+            if following:
+                im[0] = im[following[0]]
+            continue
+        im[frame_num] = im[frame_num - 1]
 
-            arr = data[group][dset][:, :]
+    imwrite(path_to_no_fluor_movie, im)
 
-            if i == 0:
-                arr_old = arr
-
-            frame_num = int(dset.split("T")[1])
-
-            if (frame_num - fluor_offset) % fluor_step == 0 and frame_num >= fluor_offset:
-                # we are going to duplicate the previous picture and replace the fluor. picture
-                im[frame_num] = im[frame_num - 1]
-                g1.create_dataset(dset, data=arr_old)
-                data_no_fluor[group][dset][:, :] = arr_old
-            else:
-                g1.create_dataset(dset, data=arr)
-                pass
-
-            arr_old = arr
-
-    im_nofluor = im
-    imwrite('./output/' + filename + '_no_fluor.tif', im_nofluor)
-    data_no_fluor.close()
+    return frames
 
 
-def get_fluorescence_data(initial_movie_path: str,
+def get_fluorescence_data(path_to_init_movie: str,
+                          path_to_first_mask: str,
                           trap_path: str,
                           Nmax: int,
                           fluor_offset: int,
@@ -72,18 +134,15 @@ def get_fluorescence_data(initial_movie_path: str,
     """
     track_df = pd.read_csv(trap_path + '/tracking_with_mother.csv')
 
-    list_fluor_frames = [fluor_offset]
-    cpt = fluor_offset
+    # range() stops before Nmax, so the last entry can never point past the end
+    # of the movie the way the old hand-rolled loop could
+    fluor_frames = list_fluor_frames(Nmax, fluor_offset, fluor_step)
 
-    while cpt <= Nmax - fluor_step:
-        list_fluor_frames.append(list_fluor_frames[-1] + fluor_step)
-        cpt += fluor_step
+    h5data_path = path_to_first_mask #glob.glob(initial_movie_path + '/*.h5')
+    data_fluor = h5py.File(h5data_path, 'r')
 
-    h5data_path = glob.glob(initial_movie_path + '/*.h5')
-    data_fluor = h5py.File(h5data_path[0], 'r')
-
-    tifdata_path = glob.glob(initial_movie_path + '/*.tif')
-    im = io.imread(tifdata_path[0])
+    tifdata_path = path_to_init_movie #glob.glob(initial_movie_path + '/*.tif')
+    im = io.imread(tifdata_path)
 
     group = list(data_fluor.keys())[0]
 
@@ -97,39 +156,36 @@ def get_fluorescence_data(initial_movie_path: str,
     track_df['fluor_std'] = -1.
     track_df['fluorescence_values'] = 'none'
 
-    for i_frame in list_fluor_frames:
+    for i_frame in fluor_frames:
         i_mask = int(i_frame - 1.)
         i_fluor = int(i_frame)
+
+        if i_mask < 0:
+            # first frame of the movie is a fluorescence frame, so there is no
+            # preceding bright-field mask to measure through
+            continue
 
         cell_list = list(track_df.loc[track_df['frame'] == i_mask]['labelID'])
 
         dset = "T" + str(i_mask)
         arr = data_fluor[group][dset][:, :]
+        fluor_image = im[i_fluor]
 
         for cellid in cell_list:
 
-            indices = np.where(arr == cellid)
+            # gather the cell's pixels in one go rather than one at a time
+            fluorescence_per_cell = fluor_image[arr == cellid].tolist()
 
-            fluorescence_per_cell = []
-            for i in range(0, len(indices[0])):
-                ind1 = indices[0][i]
-                ind2 = indices[1][i]
-                fluorescence_per_cell.append(im[i_fluor][ind1, ind2])
+            if not fluorescence_per_cell:
+                continue
 
-            track_df.loc[(track_df['frame'] == int(i_frame)) &
-                         (track_df['labelID'] == cellid),
-                         'fluor_avg'] = np.average(fluorescence_per_cell)
+            rows = ((track_df['frame'] == int(i_frame)) &
+                    (track_df['labelID'] == cellid))
 
-            track_df.loc[(track_df['frame'] == int(i_frame)) &
-                         (track_df['labelID'] == cellid),
-                         'fluor_max'] = np.max(fluorescence_per_cell)
+            track_df.loc[rows, 'fluor_avg'] = np.average(fluorescence_per_cell)
+            track_df.loc[rows, 'fluor_max'] = np.max(fluorescence_per_cell)
+            track_df.loc[rows, 'fluor_std'] = np.std(fluorescence_per_cell)
+            track_df.loc[rows, 'fluorescence_values'] = str(fluorescence_per_cell)
 
-            track_df.loc[(track_df['frame'] == int(i_frame)) &
-                         (track_df['labelID'] == cellid),
-                         'fluor_std'] = np.std(fluorescence_per_cell)
-
-            track_df.loc[(track_df['frame'] == int(i_frame)) &
-                         (track_df['labelID'] == cellid),
-                         'fluorescence_values'] = str(fluorescence_per_cell)
-
+    data_fluor.close()
     track_df.to_csv(trap_path + '/tracking_with_fluor.csv')
