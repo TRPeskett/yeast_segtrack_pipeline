@@ -37,11 +37,9 @@ retrain/rounds/
 midap/
 
 # ---------------------------------------------------------------------------
-# Generated reports and media
+# Generated media and local run records
 # ---------------------------------------------------------------------------
 *.mp4
-Rplot.png
-Sgtrack_pipeline_test_results.html
 
 # Ledger of local annotation runs, written by run_annotated_positions.py.
 annotated_runs.csv
