@@ -32,21 +32,31 @@ Create and activate the conda environment :
 
 `conda activate segtrack`
 
-Download the weights for the Yeaz2 model and edit the .env file to rectify the path, so it points to newly downloaded weights.
-From https://github.com/rahi-lab/YeaZ-GUI :
+Download the weights for the YeaZ model and point the `.env` file at them.
 
-Download the parameters for segmenting phase contrast images from: https://drive.google.com/file/d/1tcdl34Aq11mrPVlyu0Qd4rUigw_6948b.
+The published weights are linked from https://github.com/rahi-lab/YeaZ-GUI:
 
-(>>>these are the weights that have been used for the test case>>>)
-Download the parameters for segmenting bright-field images from: https://drive.google.com/file/d/1vnhkp54McM836yczh4F-YYJwPahbTsY0
+- bright-field: https://drive.google.com/file/d/1vnhkp54McM836yczh4F-YYJwPahbTsY0
+- phase contrast: https://drive.google.com/file/d/1tcdl34Aq11mrPVlyu0Qd4rUigw_6948b
+- fission yeast: https://drive.google.com/file/d/1h_Wz2d3UY0jkGtMrhl32iEqbOQVXsmKS
 
-Download the parameters for segmenting fission images form: https://drive.google.com/file/d/1h_Wz2d3UY0jkGtMrhl32iEqbOQVXsmKS.
+The movies this pipeline was developed on are bright-field, so the bright-field
+weights are the ones to start from.
+
+**Which weights produced the results reported by the authors.** Not these. We
+used `weights_budding_BF_multilab_0_1`, a bright-field model from a
+multi-laboratory YeaZ retraining effort that is not yet published and that we
+are not in a position to redistribute. The pipeline does not depend on it - it
+loads any YeaZ UNet checkpoint - but segmentation quality on your own movies
+will differ from ours, and the example run below will not reproduce our output
+exactly. Use the public bright-field weights above, or fine-tune your own
+checkpoint on your imaging condition (see `retrain/README.md`).
 
 The `.env` file must exist and must contain the path to the weights. It is not
 in the repository, because the path is particular to your machine; copy
 `.env.example` to `.env` and edit it, or generate it in place:
 
-`echo "WEIGHTS_YEAST=$(pwd)/weights/weights_budding_BF_multilab_0_1" > .env`
+`echo "WEIGHTS_YEAST=$(pwd)/weights/<the-file-you-downloaded>" > .env`
 
 Without it the pipeline cannot find the weights and the segmentation step stops
 with a `FileNotFoundError` naming the path it tried.
