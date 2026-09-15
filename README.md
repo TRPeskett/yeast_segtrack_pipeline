@@ -15,7 +15,9 @@ The pipeline was originally written by Nadia Marounina and Tarun Chadha at ETH
 Zurich's Scientific IT Services; see [Credits](#credits) below for who did what,
 and [Licence](#licence) for the terms it is available under.
 
-Please report bugs and other issues through the GitHub issue tracker.
+Please report bugs and other issues through the GitHub issue tracker. For
+anything that needs a person, the contact for the pipeline is **Tom Peskett**
+(thomaspeskett@googlemail.com).
 
 
 # Installation:

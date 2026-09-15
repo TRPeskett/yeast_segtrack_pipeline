@@ -14,28 +14,32 @@ authors:
   - given-names: Nadia
     family-names: Marounina
     email: nmarounina@ethz.ch
-    affiliation: 'Scientific IT Services, ETH Zurich'
     # TODO: ask Nadia to confirm her preferred name form and add her ORCID.
     # orcid: 'https://orcid.org/0000-0000-0000-0000'
 
   # Conceptualisation, biological input, validation and testing; and the later
-  # development of the pipeline from mid-2024 onwards.
+  # development of the pipeline from mid-2024 onwards (ETH Zurich, Institute of
+  # Biochemistry, 2023-2025).
   - given-names: Tom
     family-names: Peskett
     email: thomaspeskett@googlemail.com
-    # TODO: add your affiliation and ORCID.
-    # affiliation: ''
-    # orcid: 'https://orcid.org/0000-0000-0000-0000'
+    orcid: 'https://orcid.org/0000-0002-2008-688X'
 
   # Software: wrote the template matching routine (template_matching.py).
   # Supervision of the computational side of the project.
   - given-names: Tarun
     family-names: Chadha
     website: 'https://github.com/chadhat'
-    # TODO: confirm affiliation with Tarun before publishing - the line below is
-    # inferred from the project's context, not stated by him. Add his ORCID too.
-    affiliation: 'Scientific IT Services, ETH Zurich'
+    # TODO: ask Tarun for his ORCID.
     # orcid: 'https://orcid.org/0000-0000-0000-0000'
+
+# Point of contact for questions about the pipeline, bug reports and requests to
+# reuse it. This is separate from authorship above: it says who to write to, not
+# who did the work.
+contact:
+  - given-names: Tom
+    family-names: Peskett
+    email: thomaspeskett@googlemail.com
 
 abstract: >-
   A data analysis pipeline for time-lapse microscopy of budding yeast held in
