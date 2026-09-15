@@ -392,9 +392,16 @@ are in that file.
 
 # Licence:
 
-**Not yet settled.** The original pipeline was written at ETH Zurich and was
-never released under an open-source licence, which means that by default it is
-"all rights reserved" and cannot be reused or redistributed without the
-permission of the copyright holders. Until a licence is agreed with Nadia
-Marounina, Tarun Chadha and ETH Zurich and recorded here, treat this code as
-available to read but not to reuse.
+**MIT.** See [LICENSE](LICENSE) for the full text.
+
+The pipeline was developed at ETH Zurich - the original implementation in
+Scientific IT Services, the later development in the Institute of Biochemistry -
+so the copyright line in `LICENSE` names ETH Zurich, following the same
+convention as MIDAP. Authorship is a separate matter, recorded in
+[Credits](#credits) and `CITATION.cff`.
+
+The licence covers the code in this repository only. YeaZ, MIDAP and btrack are
+not redistributed here and carry their own licences; so do the model weights,
+which are not part of this repository. The example movie in `input/` is data
+rather than software, and the MIT terms sit awkwardly on it - ask before reusing
+it on its own.

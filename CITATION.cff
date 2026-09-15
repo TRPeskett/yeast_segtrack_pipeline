@@ -58,7 +58,7 @@ keywords:
   - cell tracking
   - image analysis
 
-license-url: 'https://github.com/OWNER/REPO#licence'  # TODO: set once agreed
+license: MIT
 repository-code: 'https://github.com/OWNER/REPO'      # TODO: set after creation
 
 references:
