@@ -44,6 +44,10 @@ midap/
 # Ledger of local annotation runs, written by run_annotated_positions.py.
 annotated_runs.csv
 
+# Private working notes. They cite specific experiments, local run folders and
+# paths on this machine, so they are kept out of the published repository.
+NEXT_STEPS.md
+
 # ---------------------------------------------------------------------------
 # Editor, OS and tooling cruft
 # ---------------------------------------------------------------------------

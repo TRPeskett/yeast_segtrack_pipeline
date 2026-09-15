@@ -7,8 +7,8 @@ was developed on: cells are fragmented, and in some configurations the trap arms
 are segmented as cells.
 
 Magnification, intensity range, contrast polarity, static-structure removal and
-the phase-contrast weights were all tested and ruled out - see `../NEXT_STEPS.md`.
-The model needs examples from this condition.
+the phase-contrast weights were all tested and ruled out. The model needs
+examples from this condition.
 
 ## The loop
 

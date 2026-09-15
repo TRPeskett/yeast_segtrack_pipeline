@@ -80,22 +80,18 @@ def arguments():
         "--input_image",
         help="Input image including the full path for extraction",
         type=str,
-        default="/Users/tarunchadha/Documents/yeast_ageing/ageing_movie_examples/2021-12-15_ageing_optoControls_lightOff_Pos9_BF-1.tif",
-        # required=True,
     )
     parser.add_argument(
         "-t",
         "--template_image",
         help="Template image including the full path for extraction",
         type=str,
-        # default="/media/chadhat/4d105adc-3356-4a16-9761-ee0dcd7f23dc/Work/yeast_ageing/template_matching/data/trap_template.png",
     )
     parser.add_argument(
         "-im",
         "--input_mask",
         help="Input mask including the full path for extraction",
         type=str,
-        default="/Users/tarunchadha/Documents/yeast_ageing/ageing_movie_examples/mask_clean_data_batchsize_2_Nepochs_250_21_04.h5",
     )
     parser.add_argument(
         "-th",

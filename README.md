@@ -288,11 +288,10 @@ way: a mother that has held one colour for hundreds of frames keeps it when it
 buds.
 
 # Known limitations and next steps:
-See `NEXT_STEPS.md`. In short: tracking is now good enough that the errors left
-visible in the check movie are segmentation errors, and the segmentation model
-wants retraining on crowded cells and on the odd shapes old mothers take late in
-a long movie. That file lists specific traps and frames to draw training data
-from, along with things already tried and measured so they are not repeated.
+Tracking is now good enough that the errors left visible in the check movie are
+segmentation errors, and the segmentation model wants retraining on crowded
+cells and on the odd shapes old mothers take late in a long movie. See
+`retrain/README.md` for the retraining loop.
 
 # Tests:
 `tests/` holds regression tests for the parts of the pipeline that are now
