@@ -59,7 +59,7 @@ keywords:
   - image analysis
 
 license: MIT
-repository-code: 'https://github.com/OWNER/REPO'      # TODO: set after creation
+repository-code: 'https://github.com/TRPeskett/yeast_segtrack_pipeline'
 
 references:
   - type: article

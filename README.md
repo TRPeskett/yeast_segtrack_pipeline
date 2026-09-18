@@ -26,7 +26,7 @@ How to install and run the pipeline with the provided example:
 
 Create and activate the conda environment :
 
-`git clone https://github.com/OWNER/REPO.git`
+`git clone https://github.com/TRPeskett/yeast_segtrack_pipeline.git`
 
 `cd yeast_segtrack_pipeline`
 
