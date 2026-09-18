@@ -395,10 +395,12 @@ are in that file.
 **MIT.** See [LICENSE](LICENSE) for the full text.
 
 The pipeline was developed at ETH Zurich - the original implementation in
-Scientific IT Services, the later development in the Institute of Biochemistry -
-so the copyright line in `LICENSE` names ETH Zurich, following the same
-convention as MIDAP. Authorship is a separate matter, recorded in
-[Credits](#credits) and `CITATION.cff`.
+Scientific IT Services, the later development in the Institute of Biochemistry.
+Software written during the official duties of an ETH employment belongs to ETH
+Zurich, which holds the exclusive rights of use and exploitation, so the
+copyright line in `LICENSE` follows the form ETH recommends: the holder of those
+rights, then the authors who wrote the code, then the years. See
+<https://transfer.ethz.ch/researchers/licensing-software/copyright-ownership.html>.
 
 The licence covers the code in this repository only. YeaZ, MIDAP and btrack are
 not redistributed here and carry their own licences; so do the model weights,
