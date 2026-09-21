@@ -11,13 +11,7 @@ microscopy (bright-field) and fluorescence data, and provides data structures co
 
 The pipeline contains the midap tool that also allows manual correction of both segmentation and tracking.
 
-The pipeline was originally written by Nadia Marounina and Tarun Chadha at ETH
-Zurich's Scientific IT Services; see [Credits](#credits) below for who did what,
-and [Licence](#licence) for the terms it is available under.
-
-Please report bugs and other issues through the GitHub issue tracker. For
-anything that needs a person, the contact for the pipeline is **Tom Peskett**
-(thomaspeskett@googlemail.com).
+Please report bugs and other issues through the GitHub issue tracker.
 
 
 # Installation:
