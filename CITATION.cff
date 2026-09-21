@@ -1,11 +1,14 @@
 cff-version: 1.2.0
-title: Yeast segmentation and tracking pipeline
+title: A segmentation and tracking pipeline for budding yeast microfluidics movies
 message: >-
   If you use this pipeline in work that is published, please cite it using the
   metadata in this file, and cite the underlying tools it depends on - YeaZ,
   btrack and MIDAP - separately. Their references are listed under
   "references" below.
 type: software
+version: v0.1.0
+date-released: 2026
+doi: 10.5281/zenodo.22871367
 
 authors:
   # Software: wrote the original pipeline - the segmentation step, splitting the
